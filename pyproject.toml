@@ -21,6 +21,7 @@ dependencies = [
     "xgboost>=2.0.0",
     "optuna>=3.0.0",
     "docker>=7.0.0",
+    "tinydb>=4.8.0",
 ]
 [dependency-groups]
 dev = [
@@ -34,10 +35,6 @@ docs = [
     "mkdocs",
     "mkdocs-material",
     "mkdocstrings[python]",
-]
-gaia = [
-    "datasets==3.6.0",
-    "tqdm>=4.67.1",
 ]
 
 [build-system]
