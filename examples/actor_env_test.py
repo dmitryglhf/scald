@@ -1,5 +1,3 @@
-"""Test Docker isolation for Actor."""
-
 import asyncio
 
 from scald.common.types import TaskType
