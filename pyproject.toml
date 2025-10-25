@@ -12,6 +12,10 @@ dependencies = [
     "fastmcp>=0.1.0",
     "loguru>=0.7.0",
     "polars>=0.20.0",
+    "catboost>=1.2.0",
+    "lightgbm>=4.0.0",
+    "xgboost>=2.0.0",
+    "optuna>=3.0.0",
 ]
 [dependency-groups]
 dev = [
