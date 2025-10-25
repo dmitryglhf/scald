@@ -9,7 +9,7 @@ async def main():
     """Example usage of SCALD framework."""
 
     csv_path = Path("data/iris.csv")
-    target = "target"
+    target = "Species"
     task_type = TaskType.CLASSIFICATION
 
     scald = Scald(
