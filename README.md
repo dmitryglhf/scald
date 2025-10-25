@@ -12,29 +12,26 @@
 
 ## Overview
 
-SCALD automates machine learning workflows using Actor-Critic agents and isolated container environments.
+SCALD automates machine learning workflows using Actor-Critic agents and MCP servers.
 
 **Key features:**
-- Automated EDA, preprocessing, and model training via Agents
-- Safe experimentation through container isolation
+- Agent-driven EDA, preprocessing, and model training
 - Boosting algorithms: CatBoost, LightGBM, XGBoost
 - MCP server integration for data operations
+- Iterative refinement via Actor-Critic feedback loop
 
 ## Installation
 
 ### Automated (recommended)
 
 ```bash
-make install          # Installs Docker, container-use, and Python env via uv
+make install          # Installs uv and Python dependencies
 cp .env.example .env  # Add OPENROUTER_API_KEY
 ```
 
 ### Manual
 
-1. Install dependencies:
-   - [Docker](https://docs.docker.com/get-docker/)
-   - [container-use](https://github.com/dagger/container-use#installation)
-   - [uv](https://docs.astral.sh/uv/getting-started/installation/)
+1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
 2. Install Python dependencies:
    ```bash
@@ -64,9 +61,9 @@ print(f"Predictions: {result.predictions_path}")
 
 ## Architecture
 
-- Actor: Creates isolated environments, analyzes data, trains models
+- Actor: Analyzes data and trains models using MCP tools
 - Critic: Evaluates solutions, provides feedback, decides acceptance
-- MCP Servers: container-use, data_analysis, data_load, data_processing, machine_learning
+- MCP Servers: data_analysis, data_load, data_processing, machine_learning, sequential-thinking
 
 ## Development
 
@@ -85,7 +82,5 @@ make help      # Show all commands
 ## Requirements
 
 - Python 3.11+
-- Docker
-- container-use
 - uv (Python package manager)
 - OpenRouter API key

@@ -18,9 +18,9 @@ class TestMCPServersRegistry:
         assert isinstance(MCP_SERVERS, dict)
         assert len(MCP_SERVERS) > 0
 
-    def test_registry_has_container_use(self):
-        """Registry should contain container-use server."""
-        assert "container-use" in MCP_SERVERS
+    def test_registry_has_sequential_thinking(self):
+        """Registry should contain sequential-thinking server."""
+        assert "sequential-thinking" in MCP_SERVERS
 
     def test_registry_has_data_science_servers(self):
         """Registry should contain all data science servers."""
@@ -42,13 +42,12 @@ class TestMCPServersRegistry:
             assert config.timeout > 0, f"Invalid timeout for {name}"
             assert config.retries > 0, f"Invalid retries for {name}"
 
-    def test_container_use_config(self):
-        """Verify container-use configuration."""
-        config = MCP_SERVERS["container-use"]
-        assert config.command == "container-use"
-        assert "stdio" in config.args
-        assert config.timeout == 60
-        assert config.retries == 3
+    def test_sequential_thinking_config(self):
+        """Verify sequential-thinking configuration."""
+        config = MCP_SERVERS["sequential-thinking"]
+        assert config.command == "npx"
+        assert "@modelcontextprotocol/server-sequential-thinking" in config.args
+        assert config.timeout == 10
 
     def test_python_servers_have_module_path(self):
         """Python servers should have module_path set."""
@@ -73,9 +72,9 @@ class TestCreateSingleToolset:
         with pytest.raises(ValueError, match="Unknown MCP server"):
             _create_single_toolset("nonexistent-server")
 
-    def test_creates_toolset_for_container_use(self):
-        """Should create MCPServerStdio for container-use."""
-        toolset = _create_single_toolset("container-use")
+    def test_creates_toolset_for_sequential_thinking(self):
+        """Should create MCPServerStdio for sequential-thinking."""
+        toolset = _create_single_toolset("sequential-thinking")
         assert isinstance(toolset, MCPServerStdio)
 
     def test_creates_toolset_for_data_analysis(self):
@@ -94,28 +93,28 @@ class TestGetMcpToolsets:
 
     def test_single_server(self):
         """Should return single toolset."""
-        toolsets = get_mcp_toolsets(["container-use"])
+        toolsets = get_mcp_toolsets(["data_analysis"])
         assert len(toolsets) == 1
         assert isinstance(toolsets[0], MCPServerStdio)
 
     def test_multiple_servers(self):
         """Should return multiple toolsets."""
-        servers = ["container-use", "data_analysis", "data_load"]
+        servers = ["data_analysis", "data_load"]
         toolsets = get_mcp_toolsets(servers)
-        assert len(toolsets) == 3
+        assert len(toolsets) == 2
         for toolset in toolsets:
             assert isinstance(toolset, MCPServerStdio)
 
     def test_unknown_server_raises(self):
         """Should raise for unknown server in list."""
         with pytest.raises(ValueError, match="Unknown MCP server"):
-            get_mcp_toolsets(["container-use", "unknown-server"])
+            get_mcp_toolsets(["data_analysis", "unknown-server"])
 
     def test_actor_default_tools(self):
         """Should work with Actor's default tool list."""
-        actor_tools = ["container-use", "data_analysis", "data_load", "machine_learning"]
+        actor_tools = ["data_analysis", "data_load", "machine_learning"]
         toolsets = get_mcp_toolsets(actor_tools)
-        assert len(toolsets) == 4
+        assert len(toolsets) == 3
         for toolset in toolsets:
             assert isinstance(toolset, MCPServerStdio)
 
@@ -140,25 +139,25 @@ class TestGetServerDescriptions:
         for name, desc in descriptions.items():
             assert isinstance(desc, str), f"Description for {name} is not a string"
 
-    def test_container_use_has_description(self):
-        """container-use should have a description."""
+    def test_sequential_thinking_has_description(self):
+        """sequential-thinking should have a description."""
         descriptions = get_server_descriptions()
-        desc = descriptions.get("container-use")
+        desc = descriptions.get("sequential-thinking")
         assert desc is not None
         assert len(desc) > 0
 
     def test_external_servers_no_description(self):
         """External servers without module_path should have default description."""
         descriptions = get_server_descriptions()
-        # container-use has no module_path, should have fallback
-        assert "container-use" in descriptions
+        # sequential-thinking has no module_path, should have fallback
+        assert "sequential-thinking" in descriptions
         # Fallback or valid description
         assert (
-            descriptions["container-use"]
+            descriptions["sequential-thinking"]
             in [
                 "No description available",
             ]
-            or len(descriptions["container-use"]) > 0
+            or len(descriptions["sequential-thinking"]) > 0
         )
 
     def test_custom_servers_dict(self):
@@ -183,7 +182,7 @@ class TestRegistryIntegration:
         assert len(descriptions) > 0
 
         # Create toolsets for a subset
-        toolset_names = ["container-use", "data_analysis"]
+        toolset_names = ["data_analysis", "data_load"]
         toolsets = get_mcp_toolsets(toolset_names)
         assert len(toolsets) == 2
 

@@ -5,7 +5,6 @@ from ..common.logger import get_logger
 from .utils import (
     MCPServerConfig,
     create_mcp_server_stdio,
-    external_server,
     get_server_description,
     npx_server,
     python_server,
@@ -24,8 +23,6 @@ MCP_SERVERS: dict[str, MCPServerConfig] = {
     "sequential-thinking": npx_server(
         "@modelcontextprotocol/server-sequential-thinking", timeout=10
     ),
-    # Container & Environment Management
-    "container-use": external_server("container-use", args=["stdio"], timeout=60, retries=3),
     # Data Science Tools
     "data_analysis": python_server("data_analysis/server.py", timeout=30, retries=3),
     "data_load": python_server("data_load/server.py", timeout=30, retries=3),
