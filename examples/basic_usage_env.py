@@ -8,18 +8,16 @@ async def main():
     # Test with Docker isolation
     scald = Scald(max_iterations=1, use_docker=True)
 
-    result = await scald.run(
-        csv_path="examples/data/iris.csv",
+    predictions = await scald.run(
+        train_path="examples/data/iris_train.csv",
+        test_path="examples/data/iris_test.csv",
         target="Species",
         task_type=TaskType.CLASSIFICATION,
     )
 
-    print(f"\n{'=' * 60}")
-    print(f"Success: {result.success}")
-    print(f"Iterations: {result.iterations}")
-    print(f"Report: {result.report_path}")
-    print(f"Predictions: {result.predictions_path}")
-    print(f"{'=' * 60}\n")
+    print(f"Predictions shape: {predictions.shape}")
+    print(f"Predictions dtype: {predictions.dtype}")
+    print(f"First 10 predictions: {predictions[:10]}")
 
 
 if __name__ == "__main__":

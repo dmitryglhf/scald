@@ -2,7 +2,6 @@ from pathlib import Path
 
 from .logger import get_logger
 
-# Re-export Path for convenience
 __all__ = [
     "Path",
     "resolve_csv_path",

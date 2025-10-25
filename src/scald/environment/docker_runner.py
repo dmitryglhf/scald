@@ -64,7 +64,8 @@ class DockerRunner:
 
     def run_actor(
         self,
-        csv_path: Path,
+        train_path: Path,
+        test_path: Path,
         target: str,
         task_type: TaskType,
         feedback: str | None = None,
@@ -72,7 +73,8 @@ class DockerRunner:
         self.ensure_image_exists()
 
         # Prepare paths (must be absolute for Docker)
-        csv_path = csv_path.resolve()
+        train_path = train_path.resolve()
+        test_path = test_path.resolve()
         session_dir = get_session_dir().resolve()
         output_dir = (session_dir / "actor_output").resolve()
         output_dir.mkdir(exist_ok=True)
@@ -81,15 +83,31 @@ class DockerRunner:
         logs_dir.mkdir(exist_ok=True)
 
         # Prepare volumes (Docker requires absolute paths)
+        # Mount parent directories of both train and test files
         volumes = {
-            str(csv_path.parent.resolve()): {"bind": "/data", "mode": "ro"},
+            str(train_path.parent.resolve()): {"bind": "/data/train", "mode": "ro"},
+            str(test_path.parent.resolve()): {"bind": "/data/test", "mode": "ro"},
             str(output_dir): {"bind": "/output", "mode": "rw"},
             str(logs_dir): {"bind": "/app/scald_logs", "mode": "rw"},
         }
 
+        # If train and test are in the same directory, use single mount
+        if train_path.parent == test_path.parent:
+            volumes = {
+                str(train_path.parent.resolve()): {"bind": "/data", "mode": "ro"},
+                str(output_dir): {"bind": "/output", "mode": "rw"},
+                str(logs_dir): {"bind": "/app/scald_logs", "mode": "rw"},
+            }
+            train_docker_path = f"/data/{train_path.name}"
+            test_docker_path = f"/data/{test_path.name}"
+        else:
+            train_docker_path = f"/data/train/{train_path.name}"
+            test_docker_path = f"/data/test/{test_path.name}"
+
         # Prepare environment
         environment = {
-            "CSV_PATH": f"/data/{csv_path.name}",
+            "TRAIN_PATH": train_docker_path,
+            "TEST_PATH": test_docker_path,
             "TARGET": target,
             "TASK_TYPE": task_type.value,
             "OUTPUT_DIR": "/output",
@@ -100,7 +118,7 @@ class DockerRunner:
             environment["FEEDBACK"] = feedback
 
         logger.info(f"Running Actor in Docker container for {task_type.value} task")
-        logger.debug(f"CSV: {csv_path}, Target: {target}")
+        logger.debug(f"Train: {train_path}, Test: {test_path}, Target: {target}")
 
         try:
             # Run container

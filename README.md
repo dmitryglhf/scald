@@ -40,8 +40,9 @@ from scald import Scald
 from scald.common.types import TaskType
 
 scald = Scald(max_iterations=5)
-result = await scald.run(
-    csv_path="data/train.csv",
+predictions = await scald.run(
+    train_path="data/train.csv",
+    test_path="data/test.csv",
     target="target_column",
     task_type=TaskType.CLASSIFICATION,
 )

@@ -24,6 +24,9 @@ class ActorSolution(BaseModel):
     """Solution from Actor."""
 
     predictions_path: Optional[Path] = Field(default=None, description="Path to predictions CSV")
+    predictions: list[Any] = Field(
+        default_factory=list, description="List of predictions on test set"
+    )
     metrics: dict[str, float] = Field(default_factory=dict, description="Performance metrics")
     report: str = Field(
         default="",

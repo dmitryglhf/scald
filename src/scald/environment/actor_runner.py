@@ -43,7 +43,8 @@ def save_solution(solution: ActorSolution, output_dir: Path) -> None:
 
 
 async def run_actor_task(
-    csv_path: Path,
+    train_path: Path,
+    test_path: Path,
     target: str,
     task_type: TaskType,
     output_dir: Path,
@@ -52,7 +53,8 @@ async def run_actor_task(
     """Run Actor to solve task and save results."""
     actor = Actor()
     solution = await actor.solve_task(
-        csv_path=csv_path,
+        train_path=train_path,
+        test_path=test_path,
         target=target,
         task_type=task_type,
         feedback=feedback,
@@ -72,7 +74,8 @@ async def run_actor_task(
 async def main():
     """Main entrypoint for Actor runner in Docker container."""
     # Read environment variables
-    csv_path = Path(os.getenv("CSV_PATH", "/data/train.csv"))
+    train_path = Path(os.getenv("TRAIN_PATH", "/data/train.csv"))
+    test_path = Path(os.getenv("TEST_PATH", "/data/test.csv"))
     target = os.getenv("TARGET", "target")
     task_type_str = os.getenv("TASK_TYPE", "classification")
     output_dir = Path(os.getenv("OUTPUT_DIR", "/output"))
@@ -81,7 +84,7 @@ async def main():
     task_type = TaskType(task_type_str)
 
     try:
-        await run_actor_task(csv_path, target, task_type, output_dir, feedback)
+        await run_actor_task(train_path, test_path, target, task_type, output_dir, feedback)
         logger.info("Actor completed successfully")
         sys.exit(0)
     except Exception as e:

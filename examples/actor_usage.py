@@ -9,13 +9,16 @@ async def main():
 
     # Run Actor to solve the task
     solution = await actor.solve_task(
-        csv_path="examples/data/iris.csv",
+        train_path="examples/data/iris_train.csv",
+        test_path="examples/data/iris_test.csv",
         target="Species",
         task_type=TaskType.CLASSIFICATION,
     )
 
-    print(f"Predictions: {solution.predictions_path}")
+    print(f"Predictions path: {solution.predictions_path}")
+    print(f"Predictions count: {len(solution.predictions)}")
     print(f"Metrics: {solution.metrics}")
+    print(f"First 10 predictions: {solution.predictions[:10]}")
 
 
 if __name__ == "__main__":

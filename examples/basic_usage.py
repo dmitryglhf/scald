@@ -5,20 +5,18 @@ from scald.main import Scald
 
 
 async def main():
-    scald = Scald(
-        max_iterations=5,
-    )
+    scald = Scald(max_iterations=5)
 
-    result = await scald.run(
-        csv_path="examples/data/iris.csv",
+    predictions = await scald.run(
+        train_path="examples/data/iris_train.csv",
+        test_path="examples/data/iris_test.csv",
         target="Species",
         task_type=TaskType.CLASSIFICATION,
     )
 
-    print(f"Success: {result.success}")
-    print(f"Iterations: {result.iterations}")
-    print(f"Report: {result.report_path}")
-    print(f"Predictions: {result.predictions_path}")
+    print(f"Predictions shape: {predictions.shape}")
+    print(f"Predictions dtype: {predictions.dtype}")
+    print(f"First 10 predictions: {predictions[:10]}")
 
 
 if __name__ == "__main__":
