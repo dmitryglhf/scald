@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./assets/logo.svg" alt="logo" width="300"/>
+<img src="./assets/logo.svg" alt="logo" width="200"/>
 
 # SCALD
 
