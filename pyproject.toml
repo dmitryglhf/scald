@@ -4,6 +4,10 @@ version = "0.1.0"
 description = "Scalable Collaborative Agents for Data Science"
 readme = "README.md"
 requires-python = ">=3.11"
+authors = [
+    {name = "Dmitry Gilemkhanov", email = "dima.rize@yandex.ru"}
+]
+license = {text = "MIT"}
 dependencies = [
     "python-dotenv>=1.0.0",
     "pydantic>=2.0.0",

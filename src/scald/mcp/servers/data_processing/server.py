@@ -121,8 +121,12 @@ async def handle_missing_values(
                     df = df.with_columns(pl.col(col).fill_null(median_val))
         elif strategy == "mode":
             for col in df.columns:
-                mode_val = df[col].mode().first()
-                df = df.with_columns(pl.col(col).fill_null(mode_val))
+                mode_result = df[col].mode()
+                if mode_result.height > 0:
+                    mode_val = mode_result.first()
+                    df = df.with_columns(pl.col(col).fill_null(mode_val))
+                else:
+                    logger.warning(f"Column {col} has no mode (all nulls?), skipping")
         elif strategy == "zero":
             df = df.fill_null(0)
         else:
@@ -183,7 +187,7 @@ async def remove_outliers(
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(description="Scale numerical features.")
+@mcp.tool(description="Scale numerical features using standard or minmax scaling.")
 async def scale_features(
     file_path: Annotated[str, Field(description="Path to CSV file")],
     columns: Annotated[list[str], Field(description="Columns to scale")],
@@ -202,16 +206,23 @@ async def scale_features(
             if method == "standard":
                 mean = df[col].mean()
                 std = df[col].std()
+                if std == 0 or std is None:
+                    logger.warning(f"Column {col} has zero std, skipping scaling")
+                    continue
                 df = df.with_columns(((pl.col(col) - mean) / std).alias(col))
             elif method == "minmax":
                 min_val = df[col].min()
                 max_val = df[col].max()
+                if min_val == max_val:
+                    logger.warning(f"Column {col} has constant value, skipping scaling")
+                    continue
                 df = df.with_columns(((pl.col(col) - min_val) / (max_val - min_val)).alias(col))
             else:
                 return {"success": False, "error": f"Unknown method: {method}"}
 
         if output_path:
             df.write_csv(Path(output_path))
+            logger.info(f"[MCP:data_processing] Saved scaled data to {output_path}")
 
         return {
             "success": True,
@@ -224,18 +235,28 @@ async def scale_features(
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(description="Create train/test split.")
+@mcp.tool(description="Split dataset into train and test sets with stratified sampling.")
 async def train_test_split(
     file_path: Annotated[str, Field(description="Path to CSV file")],
-    test_size: Annotated[float, Field(description="Test set proportion")] = 0.2,
+    test_size: Annotated[float, Field(description="Test set proportion (0.0-1.0)")] = 0.2,
     train_path: Annotated[Optional[str], Field(description="Path to save train set")] = None,
     test_path: Annotated[Optional[str], Field(description="Path to save test set")] = None,
-    random_seed: Annotated[int, Field(description="Random seed")] = 42,
+    random_seed: Annotated[int, Field(description="Random seed for reproducibility")] = 42,
 ) -> dict:
     """Split data into train and test sets."""
-    logger.info(f"[MCP:data_processing] train_test_split: {test_size}")
+    logger.info(f"[MCP:data_processing] train_test_split: test_size={test_size}")
     try:
+        # Validate test_size
+        if not 0 < test_size < 1:
+            return {
+                "success": False,
+                "error": f"test_size must be between 0 and 1, got {test_size}",
+            }
+
         df = pl.read_csv(Path(file_path))
+
+        if df.height == 0:
+            return {"success": False, "error": "Dataset is empty"}
 
         df = df.sample(fraction=1.0, seed=random_seed, shuffle=True)
 
@@ -247,8 +268,10 @@ async def train_test_split(
 
         if train_path:
             train_df.write_csv(Path(train_path))
+            logger.info(f"[MCP:data_processing] Saved train set to {train_path}")
         if test_path:
             test_df.write_csv(Path(test_path))
+            logger.info(f"[MCP:data_processing] Saved test set to {test_path}")
 
         return {
             "success": True,

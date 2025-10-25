@@ -62,11 +62,11 @@ async def train_catboost(
     target_column: Annotated[str, Field(description="Name of the target column in CSV")],
     task_type: Annotated[str, Field(description="Either 'classification' or 'regression'")],
     test_path: Annotated[
-        str, Field(description="Path to test CSV file (required for predictions)")
+        Optional[str], Field(description="Path to test CSV file (required for predictions)")
     ] = None,
     model_path: Annotated[Optional[str], Field(description="Path to save trained model")] = None,
     predictions_path: Annotated[
-        str,
+        Optional[str],
         Field(description="Path to save test predictions CSV (e.g., '/output/predictions.csv')"),
     ] = None,
     iterations: Annotated[int, Field(description="Number of boosting iterations")] = 100,
@@ -142,11 +142,11 @@ async def train_lightgbm(
     target_column: Annotated[str, Field(description="Name of the target column in CSV")],
     task_type: Annotated[str, Field(description="Either 'classification' or 'regression'")],
     test_path: Annotated[
-        str, Field(description="Path to test CSV file (required for predictions)")
+        Optional[str], Field(description="Path to test CSV file (required for predictions)")
     ] = None,
     model_path: Annotated[Optional[str], Field(description="Path to save trained model")] = None,
     predictions_path: Annotated[
-        str,
+        Optional[str],
         Field(description="Path to save test predictions CSV (e.g., '/output/predictions.csv')"),
     ] = None,
     num_iterations: Annotated[int, Field(description="Number of boosting iterations")] = 100,
@@ -228,11 +228,11 @@ async def train_xgboost(
     target_column: Annotated[str, Field(description="Name of the target column in CSV")],
     task_type: Annotated[str, Field(description="Either 'classification' or 'regression'")],
     test_path: Annotated[
-        str, Field(description="Path to test CSV file (required for predictions)")
+        Optional[str], Field(description="Path to test CSV file (required for predictions)")
     ] = None,
     model_path: Annotated[Optional[str], Field(description="Path to save trained model")] = None,
     predictions_path: Annotated[
-        str,
+        Optional[str],
         Field(description="Path to save test predictions CSV (e.g., '/output/predictions.csv')"),
     ] = None,
     n_estimators: Annotated[int, Field(description="Number of boosting estimators")] = 100,
