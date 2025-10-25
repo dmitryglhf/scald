@@ -61,6 +61,9 @@ async def train_catboost(
     task_type: Annotated[str, Field(description="'classification' or 'regression'")],
     test_path: Annotated[Optional[str], Field(description="Path to test CSV")] = None,
     model_path: Annotated[Optional[str], Field(description="Path to save model")] = None,
+    predictions_path: Annotated[
+        Optional[str], Field(description="Path to save test predictions CSV")
+    ] = None,
     iterations: Annotated[int, Field(description="Number of iterations")] = 100,
     learning_rate: Annotated[float, Field(description="Learning rate")] = 0.1,
 ) -> dict:
@@ -102,6 +105,12 @@ async def train_catboost(
             test_metrics = _calculate_metrics(y_test, test_pred, task_type)
             result["test_metrics"] = test_metrics
 
+            # Save predictions if path provided
+            if predictions_path:
+                pred_df = pl.DataFrame({"prediction": test_pred})
+                pred_df.write_csv(Path(predictions_path))
+                result["predictions_path"] = predictions_path
+
         if model_path:
             model.save_model(model_path)
             result["model_path"] = model_path
@@ -119,6 +128,9 @@ async def train_lightgbm(
     task_type: Annotated[str, Field(description="'classification' or 'regression'")],
     test_path: Annotated[Optional[str], Field(description="Path to test CSV")] = None,
     model_path: Annotated[Optional[str], Field(description="Path to save model")] = None,
+    predictions_path: Annotated[
+        Optional[str], Field(description="Path to save test predictions CSV")
+    ] = None,
     num_iterations: Annotated[int, Field(description="Number of iterations")] = 100,
     learning_rate: Annotated[float, Field(description="Learning rate")] = 0.1,
 ) -> dict:
@@ -165,6 +177,12 @@ async def train_lightgbm(
             test_metrics = _calculate_metrics(y_test, test_pred, task_type)
             result["test_metrics"] = test_metrics
 
+            # Save predictions if path provided
+            if predictions_path:
+                pred_df = pl.DataFrame({"prediction": test_pred})
+                pred_df.write_csv(Path(predictions_path))
+                result["predictions_path"] = predictions_path
+
         if model_path:
             with open(model_path, "wb") as f:
                 pickle.dump(model, f)
@@ -183,6 +201,9 @@ async def train_xgboost(
     task_type: Annotated[str, Field(description="'classification' or 'regression'")],
     test_path: Annotated[Optional[str], Field(description="Path to test CSV")] = None,
     model_path: Annotated[Optional[str], Field(description="Path to save model")] = None,
+    predictions_path: Annotated[
+        Optional[str], Field(description="Path to save test predictions CSV")
+    ] = None,
     n_estimators: Annotated[int, Field(description="Number of estimators")] = 100,
     learning_rate: Annotated[float, Field(description="Learning rate")] = 0.1,
 ) -> dict:
@@ -226,6 +247,12 @@ async def train_xgboost(
             test_pred = model.predict(X_test)
             test_metrics = _calculate_metrics(y_test, test_pred, task_type)
             result["test_metrics"] = test_metrics
+
+            # Save predictions if path provided
+            if predictions_path:
+                pred_df = pl.DataFrame({"prediction": test_pred})
+                pred_df.write_csv(Path(predictions_path))
+                result["predictions_path"] = predictions_path
 
         if model_path:
             with open(model_path, "wb") as f:

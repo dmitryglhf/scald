@@ -8,6 +8,7 @@ from .utils import (
     get_server_description,
     npx_server,
     python_server,
+    uvx_server,
     validate_server_config,
 )
 
@@ -23,6 +24,8 @@ MCP_SERVERS: dict[str, MCPServerConfig] = {
     "sequential-thinking": npx_server(
         "@modelcontextprotocol/server-sequential-thinking", timeout=10
     ),
+    # System Tools
+    "terminal-controller": uvx_server("terminal_controller", timeout=30, retries=2),
     # Data Science Tools
     "data_analysis": python_server("data_analysis/server.py", timeout=30, retries=3),
     "data_loading": python_server("data_loading/server.py", timeout=30, retries=3),

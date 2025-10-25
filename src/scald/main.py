@@ -72,7 +72,6 @@ class Scald:
                     break
 
                 feedback = evaluation.feedback
-                logger.info(f"Refining based on feedback: {feedback}")
 
             total_time = time.time() - start_time
 

@@ -2,7 +2,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class TaskType(str, Enum):
@@ -25,6 +25,19 @@ class ActorSolution(BaseModel):
 
     predictions_path: Optional[Path] = Field(default=None, description="Path to predictions CSV")
     metrics: dict[str, float] = Field(default_factory=dict, description="Performance metrics")
+
+    @field_validator("predictions_path", mode="before")
+    @classmethod
+    def validate_predictions_path(cls, v):
+        """Handle 'null' string and invalid paths."""
+        if v is None or v == "null" or (isinstance(v, str) and v.strip().lower() == "none"):
+            return None
+        if isinstance(v, str):
+            # If string contains XML tags or other junk, treat as None
+            if "<" in v or ">" in v or len(v) > 500:
+                return None
+            return Path(v)
+        return v
 
 
 class CriticEvaluation(BaseModel):

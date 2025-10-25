@@ -100,10 +100,15 @@ class DockerRunner:
             )
 
             # Stream logs in real-time
+            import sys
+
             for line in container.logs(stream=True, follow=True):
                 log_line = line.decode("utf-8").strip()
                 if log_line:
-                    logger.info(f"[Actor] {log_line}")
+                    # Print to console without timestamp
+                    print(f"[Actor] {log_line}", file=sys.stderr)
+                    # Log to file with full context
+                    logger.opt(depth=1).debug(f"[Actor] {log_line}")
 
             # Wait for completion
             result = container.wait()
