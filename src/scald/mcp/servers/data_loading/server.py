@@ -5,6 +5,10 @@ import polars as pl
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
+from scald.common.logger import get_logger
+
+logger = get_logger()
+
 DESCRIPTION = """
 Data loading MCP server.
 
@@ -47,7 +51,7 @@ async def load_csv(
         int, Field(description="Number of rows to scan for schema inference")
     ] = 1000,
 ) -> LoadResult:
-    """Load CSV file and return DataFrame information."""
+    logger.info(f"[MCP:data_loading] load_csv: {file_path}")
     try:
         path = Path(file_path)
         if not path.exists():

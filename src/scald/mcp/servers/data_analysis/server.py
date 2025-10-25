@@ -5,6 +5,10 @@ import polars as pl
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
+from scald.common.logger import get_logger
+
+logger = get_logger()
+
 DESCRIPTION = """
 Exploratory Data Analysis MCP server.
 
@@ -28,7 +32,7 @@ mcp = FastMCP("data-analysis", instructions=DESCRIPTION)
 async def get_feature_distributions(
     file_path: Annotated[str, Field(description="Path to CSV file")],
 ) -> dict:
-    """Analyze feature distributions."""
+    logger.info(f"[MCP:data_analysis] get_feature_distributions: {file_path}")
     try:
         df = pl.read_csv(Path(file_path))
 

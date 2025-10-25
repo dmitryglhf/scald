@@ -15,7 +15,7 @@ class Scald:
     def __init__(
         self,
         max_iterations: int = 5,
-        use_docker: bool = True,
+        use_docker: bool = False,
     ):
         self.max_iterations = max_iterations
         self.use_docker = use_docker

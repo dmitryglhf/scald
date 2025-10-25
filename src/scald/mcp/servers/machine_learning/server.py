@@ -12,6 +12,10 @@ from pydantic import Field
 from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, r2_score, roc_auc_score
 from xgboost import XGBClassifier, XGBRegressor  # type: ignore
 
+from scald.common.logger import get_logger
+
+logger = get_logger()
+
 DESCRIPTION = """
 Machine learning MCP server.
 
@@ -61,6 +65,7 @@ async def train_catboost(
     learning_rate: Annotated[float, Field(description="Learning rate")] = 0.1,
 ) -> dict:
     """Train CatBoost model."""
+    logger.info(f"[MCP:machine_learning] train_catboost: {task_type}")
     try:
         train_df = pl.read_csv(Path(train_path))
         X_train = train_df.drop(target_column).to_numpy()
@@ -118,6 +123,7 @@ async def train_lightgbm(
     learning_rate: Annotated[float, Field(description="Learning rate")] = 0.1,
 ) -> dict:
     """Train LightGBM model."""
+    logger.info(f"[MCP:machine_learning] train_lightgbm: {task_type}")
     try:
         train_df = pl.read_csv(Path(train_path))
         X_train = train_df.drop(target_column).to_numpy()
@@ -181,6 +187,7 @@ async def train_xgboost(
     learning_rate: Annotated[float, Field(description="Learning rate")] = 0.1,
 ) -> dict:
     """Train XGBoost model."""
+    logger.info(f"[MCP:machine_learning] train_xgboost: {task_type}")
     try:
         train_df = pl.read_csv(Path(train_path))
         X_train = train_df.drop(target_column).to_numpy()

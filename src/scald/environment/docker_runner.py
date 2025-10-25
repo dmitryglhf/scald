@@ -57,18 +57,18 @@ class DockerRunner:
     ) -> ActorSolution:
         self.ensure_image_exists()
 
-        # Prepare paths
+        # Prepare paths (must be absolute for Docker)
         csv_path = csv_path.resolve()
-        session_dir = get_session_dir()
-        output_dir = session_dir / "actor_output"
+        session_dir = get_session_dir().resolve()
+        output_dir = (session_dir / "actor_output").resolve()
         output_dir.mkdir(exist_ok=True)
 
-        logs_dir = session_dir / "actor_logs"
+        logs_dir = (session_dir / "actor_logs").resolve()
         logs_dir.mkdir(exist_ok=True)
 
-        # Prepare volumes
+        # Prepare volumes (Docker requires absolute paths)
         volumes = {
-            str(csv_path.parent): {"bind": "/data", "mode": "ro"},
+            str(csv_path.parent.resolve()): {"bind": "/data", "mode": "ro"},
             str(output_dir): {"bind": "/output", "mode": "rw"},
             str(logs_dir): {"bind": "/app/scald_logs", "mode": "rw"},
         }
@@ -95,24 +95,26 @@ class DockerRunner:
                 volumes=volumes,
                 environment=environment,
                 detach=True,
-                remove=False,  # Keep for log inspection
+                remove=False,
                 network_mode="bridge",
             )
+
+            # Stream logs in real-time
+            for line in container.logs(stream=True, follow=True):
+                log_line = line.decode("utf-8").strip()
+                if log_line:
+                    logger.info(f"[Actor] {log_line}")
 
             # Wait for completion
             result = container.wait()
             exit_code = result["StatusCode"]
-
-            # Get logs
-            logs = container.logs().decode("utf-8")
-            logger.debug(f"Container logs:\n{logs}")
 
             # Remove container
             container.remove()
 
             if exit_code != 0:
                 logger.error(f"Actor container exited with code {exit_code}")
-                raise RuntimeError(f"Actor failed with exit code {exit_code}:\n{logs}")
+                raise RuntimeError(f"Actor failed with exit code {exit_code}")
 
             # Read results from output directory
             solution_file = output_dir / "solution.json"

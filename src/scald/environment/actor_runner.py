@@ -30,12 +30,27 @@ async def main():
             feedback=feedback,
         )
 
+        # Copy predictions file to output directory if it exists
+        predictions_output_path = None
+        if solution.predictions_path:
+            predictions_source = Path(solution.predictions_path)
+            if predictions_source.exists():
+                predictions_output_path = output_dir / predictions_source.name
+                import shutil
+
+                shutil.copy2(predictions_source, predictions_output_path)
+                logger.info(f"Copied predictions to {predictions_output_path}")
+            else:
+                logger.warning(f"Predictions file not found: {predictions_source}")
+
         # Save solution to output directory
         solution_file = output_dir / "solution.json"
         with open(solution_file, "w") as f:
             json.dump(
                 {
-                    "predictions_path": str(solution.predictions_path),
+                    "predictions_path": str(predictions_output_path)
+                    if predictions_output_path
+                    else None,
                     "metrics": solution.metrics,
                 },
                 f,

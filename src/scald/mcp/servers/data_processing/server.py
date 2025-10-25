@@ -5,6 +5,10 @@ import polars as pl
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
+from scald.common.logger import get_logger
+
+logger = get_logger()
+
 DESCRIPTION = """
 Data processing MCP server.
 
@@ -32,6 +36,7 @@ async def encode_categorical_onehot(
     output_path: Annotated[str, Field(description="Path to save encoded data")],
 ) -> dict:
     """One-hot encode categorical columns."""
+    logger.info(f"[MCP:data_processing] encode_categorical_onehot: {columns}")
     try:
         df = pl.read_csv(Path(file_path))
 
@@ -60,6 +65,7 @@ async def encode_categorical_label(
     output_path: Annotated[str, Field(description="Path to save encoded data")],
 ) -> dict:
     """Label encode categorical columns."""
+    logger.info(f"[MCP:data_processing] encode_categorical_label: {columns}")
     try:
         df = pl.read_csv(Path(file_path))
 
@@ -96,6 +102,7 @@ async def handle_missing_values(
     output_path: Annotated[Optional[str], Field(description="Path to save processed data")] = None,
 ) -> dict:
     """Handle missing values in dataset."""
+    logger.info(f"[MCP:data_processing] handle_missing_values: {strategy}")
     try:
         df = pl.read_csv(Path(file_path))
         original_rows = df.height
@@ -144,6 +151,7 @@ async def remove_outliers(
     output_path: Annotated[Optional[str], Field(description="Path to save cleaned data")] = None,
 ) -> dict:
     """Remove outliers from specified columns."""
+    logger.info(f"[MCP:data_processing] remove_outliers: {columns}")
     try:
         df = pl.read_csv(Path(file_path))
         original_rows = df.height
@@ -183,6 +191,7 @@ async def scale_features(
     output_path: Annotated[Optional[str], Field(description="Path to save scaled data")] = None,
 ) -> dict:
     """Scale numerical features."""
+    logger.info(f"[MCP:data_processing] scale_features: {method}")
     try:
         df = pl.read_csv(Path(file_path))
 
@@ -224,6 +233,7 @@ async def train_test_split(
     random_seed: Annotated[int, Field(description="Random seed")] = 42,
 ) -> dict:
     """Split data into train and test sets."""
+    logger.info(f"[MCP:data_processing] train_test_split: {test_size}")
     try:
         df = pl.read_csv(Path(file_path))
 
