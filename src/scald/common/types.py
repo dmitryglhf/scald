@@ -33,14 +33,29 @@ class ActorSolution(BaseModel):
     @field_validator("predictions_path", mode="before")
     @classmethod
     def validate_predictions_path(cls, v):
-        """Handle 'null' string and invalid paths."""
-        if v is None or v == "null" or (isinstance(v, str) and v.strip().lower() == "none"):
+        """Handle 'null' string and invalid paths, extract valid path from junk."""
+        if v is None:
             return None
+
         if isinstance(v, str):
-            # If string contains XML tags or other junk, treat as None
-            if "<" in v or ">" in v or len(v) > 500:
+            # Handle explicit null/none values
+            if v.strip().lower() in ("null", "none", ""):
                 return None
+
+            # If string contains XML/reasoning junk, try to extract valid path
+            if "<" in v or ">" in v or len(v) > 500:
+                # Try to extract /output/predictions.csv pattern
+                import re
+
+                match = re.search(r"(/output/[a-zA-Z0-9_\-./]+\.csv)", v)
+                if match:
+                    return Path(match.group(1))
+                # If no valid path found, return None
+                return None
+
+            # Valid string path
             return Path(v)
+
         return v
 
 

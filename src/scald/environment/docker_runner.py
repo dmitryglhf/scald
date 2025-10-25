@@ -12,8 +12,9 @@ logger = get_logger()
 
 
 class DockerRunner:
-    def __init__(self, image_name: str = "scald-actor:latest"):
+    def __init__(self, image_name: str = "scald-actor:latest", rebuild: bool = False):
         self.image_name = image_name
+        self.rebuild = rebuild
         try:
             self.client = docker.from_env()
             logger.debug("Docker client initialized")
@@ -37,12 +38,25 @@ class DockerRunner:
             raise
 
     def ensure_image_exists(self) -> None:
+        project_root = Path(__file__).parent.parent.parent.parent
+
+        if self.rebuild:
+            logger.info("Rebuild flag set, rebuilding image...")
+            try:
+                self.client.images.remove(self.image_name, force=True)
+            except Exception:
+                pass
+            self.build_image(
+                dockerfile_path=project_root / "Dockerfile.actor",
+                context_path=project_root,
+            )
+            return
+
         try:
             self.client.images.get(self.image_name)
             logger.debug(f"Image {self.image_name} exists")
         except ImageNotFound:
             logger.warning("Image not found, building...")
-            project_root = Path(__file__).parent.parent.parent.parent
             self.build_image(
                 dockerfile_path=project_root / "Dockerfile.actor",
                 context_path=project_root,

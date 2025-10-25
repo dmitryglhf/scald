@@ -66,12 +66,23 @@ class BaseAgent(ABC):
         return []
 
     def _create_agent(self) -> Agent:
+        from scald.common.logger import get_logger
+
+        logger = get_logger()
+
         system_prompt = self._get_system_prompt()
         output_type = self._get_output_type()
         mcp_tools = self._get_mcp_tools()
 
         # Get toolsets if MCP tools are specified
         toolsets = get_mcp_toolsets(mcp_tools) if mcp_tools else []
+
+        if mcp_tools:
+            logger.info(
+                f"{self.__class__.__name__}: Loaded {len(toolsets)} MCP toolsets: {mcp_tools}"
+            )
+        else:
+            logger.info(f"{self.__class__.__name__}: No MCP tools configured")
 
         return Agent(
             name=self.__class__.__name__,
@@ -95,5 +106,13 @@ class BaseAgent(ABC):
 
     async def _run_agent(self, prompt: str) -> Any:
         """Run agent with given prompt and return structured output."""
+        from scald.common.logger import get_logger
+
+        logger = get_logger()
+
+        logger.debug(f"{self.__class__.__name__}: Running agent with prompt length={len(prompt)}")
         result = await self.agent.run(prompt)
+        logger.debug(
+            f"{self.__class__.__name__}: Agent completed, output type={type(result.output)}"
+        )
         return result.output

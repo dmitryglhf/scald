@@ -54,22 +54,34 @@ def _calculate_metrics(y_true: np.ndarray, y_pred: np.ndarray, task_type: str) -
     return metrics
 
 
-@mcp.tool(description="Train CatBoost model.")
+@mcp.tool(
+    description="Train CatBoost model and generate predictions. Returns test_metrics and predictions_path."
+)
 async def train_catboost(
-    train_path: Annotated[str, Field(description="Path to train CSV")],
-    target_column: Annotated[str, Field(description="Target column name")],
-    task_type: Annotated[str, Field(description="'classification' or 'regression'")],
-    test_path: Annotated[Optional[str], Field(description="Path to test CSV")] = None,
-    model_path: Annotated[Optional[str], Field(description="Path to save model")] = None,
-    predictions_path: Annotated[
-        Optional[str], Field(description="Path to save test predictions CSV")
+    train_path: Annotated[str, Field(description="Path to train CSV file")],
+    target_column: Annotated[str, Field(description="Name of the target column in CSV")],
+    task_type: Annotated[str, Field(description="Either 'classification' or 'regression'")],
+    test_path: Annotated[
+        str, Field(description="Path to test CSV file (required for predictions)")
     ] = None,
-    iterations: Annotated[int, Field(description="Number of iterations")] = 100,
-    learning_rate: Annotated[float, Field(description="Learning rate")] = 0.1,
+    model_path: Annotated[Optional[str], Field(description="Path to save trained model")] = None,
+    predictions_path: Annotated[
+        str,
+        Field(description="Path to save test predictions CSV (e.g., '/output/predictions.csv')"),
+    ] = None,
+    iterations: Annotated[int, Field(description="Number of boosting iterations")] = 100,
+    learning_rate: Annotated[float, Field(description="Learning rate (0.0-1.0)")] = 0.1,
 ) -> dict:
     """Train CatBoost model."""
     logger.info(f"[MCP:machine_learning] train_catboost: {task_type}")
     try:
+        # Validate inputs
+        if predictions_path and not test_path:
+            return {
+                "success": False,
+                "error": "test_path is required when predictions_path is specified",
+            }
+
         train_df = pl.read_csv(Path(train_path))
         X_train = train_df.drop(target_column).to_numpy()
         y_train = train_df[target_column].to_numpy()
@@ -110,6 +122,7 @@ async def train_catboost(
                 pred_df = pl.DataFrame({"prediction": test_pred})
                 pred_df.write_csv(Path(predictions_path))
                 result["predictions_path"] = predictions_path
+                logger.info(f"[MCP:machine_learning] Saved predictions to {predictions_path}")
 
         if model_path:
             model.save_model(model_path)
@@ -121,22 +134,34 @@ async def train_catboost(
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(description="Train LightGBM model.")
+@mcp.tool(
+    description="Train LightGBM model and generate predictions. Returns test_metrics and predictions_path."
+)
 async def train_lightgbm(
-    train_path: Annotated[str, Field(description="Path to train CSV")],
-    target_column: Annotated[str, Field(description="Target column name")],
-    task_type: Annotated[str, Field(description="'classification' or 'regression'")],
-    test_path: Annotated[Optional[str], Field(description="Path to test CSV")] = None,
-    model_path: Annotated[Optional[str], Field(description="Path to save model")] = None,
-    predictions_path: Annotated[
-        Optional[str], Field(description="Path to save test predictions CSV")
+    train_path: Annotated[str, Field(description="Path to train CSV file")],
+    target_column: Annotated[str, Field(description="Name of the target column in CSV")],
+    task_type: Annotated[str, Field(description="Either 'classification' or 'regression'")],
+    test_path: Annotated[
+        str, Field(description="Path to test CSV file (required for predictions)")
     ] = None,
-    num_iterations: Annotated[int, Field(description="Number of iterations")] = 100,
-    learning_rate: Annotated[float, Field(description="Learning rate")] = 0.1,
+    model_path: Annotated[Optional[str], Field(description="Path to save trained model")] = None,
+    predictions_path: Annotated[
+        str,
+        Field(description="Path to save test predictions CSV (e.g., '/output/predictions.csv')"),
+    ] = None,
+    num_iterations: Annotated[int, Field(description="Number of boosting iterations")] = 100,
+    learning_rate: Annotated[float, Field(description="Learning rate (0.0-1.0)")] = 0.1,
 ) -> dict:
     """Train LightGBM model."""
     logger.info(f"[MCP:machine_learning] train_lightgbm: {task_type}")
     try:
+        # Validate inputs
+        if predictions_path and not test_path:
+            return {
+                "success": False,
+                "error": "test_path is required when predictions_path is specified",
+            }
+
         train_df = pl.read_csv(Path(train_path))
         X_train = train_df.drop(target_column).to_numpy()
         y_train = train_df[target_column].to_numpy()
@@ -182,6 +207,7 @@ async def train_lightgbm(
                 pred_df = pl.DataFrame({"prediction": test_pred})
                 pred_df.write_csv(Path(predictions_path))
                 result["predictions_path"] = predictions_path
+                logger.info(f"[MCP:machine_learning] Saved predictions to {predictions_path}")
 
         if model_path:
             with open(model_path, "wb") as f:
@@ -194,22 +220,34 @@ async def train_lightgbm(
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(description="Train XGBoost model.")
+@mcp.tool(
+    description="Train XGBoost model and generate predictions. Returns test_metrics and predictions_path."
+)
 async def train_xgboost(
-    train_path: Annotated[str, Field(description="Path to train CSV")],
-    target_column: Annotated[str, Field(description="Target column name")],
-    task_type: Annotated[str, Field(description="'classification' or 'regression'")],
-    test_path: Annotated[Optional[str], Field(description="Path to test CSV")] = None,
-    model_path: Annotated[Optional[str], Field(description="Path to save model")] = None,
-    predictions_path: Annotated[
-        Optional[str], Field(description="Path to save test predictions CSV")
+    train_path: Annotated[str, Field(description="Path to train CSV file")],
+    target_column: Annotated[str, Field(description="Name of the target column in CSV")],
+    task_type: Annotated[str, Field(description="Either 'classification' or 'regression'")],
+    test_path: Annotated[
+        str, Field(description="Path to test CSV file (required for predictions)")
     ] = None,
-    n_estimators: Annotated[int, Field(description="Number of estimators")] = 100,
-    learning_rate: Annotated[float, Field(description="Learning rate")] = 0.1,
+    model_path: Annotated[Optional[str], Field(description="Path to save trained model")] = None,
+    predictions_path: Annotated[
+        str,
+        Field(description="Path to save test predictions CSV (e.g., '/output/predictions.csv')"),
+    ] = None,
+    n_estimators: Annotated[int, Field(description="Number of boosting estimators")] = 100,
+    learning_rate: Annotated[float, Field(description="Learning rate (0.0-1.0)")] = 0.1,
 ) -> dict:
     """Train XGBoost model."""
     logger.info(f"[MCP:machine_learning] train_xgboost: {task_type}")
     try:
+        # Validate inputs
+        if predictions_path and not test_path:
+            return {
+                "success": False,
+                "error": "test_path is required when predictions_path is specified",
+            }
+
         train_df = pl.read_csv(Path(train_path))
         X_train = train_df.drop(target_column).to_numpy()
         y_train = train_df[target_column].to_numpy()
@@ -253,6 +291,7 @@ async def train_xgboost(
                 pred_df = pl.DataFrame({"prediction": test_pred})
                 pred_df.write_csv(Path(predictions_path))
                 result["predictions_path"] = predictions_path
+                logger.info(f"[MCP:machine_learning] Saved predictions to {predictions_path}")
 
         if model_path:
             with open(model_path, "wb") as f:
