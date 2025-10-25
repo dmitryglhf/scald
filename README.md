@@ -5,8 +5,8 @@
 # SCALD
 ### Scalable Collaborative Agents for Data Science
 
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-black.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-white.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-white.svg)](https://opensource.org/licenses/MIT)
 
 </div>
 
@@ -22,10 +22,29 @@ SCALD automates machine learning workflows using Actor-Critic agents and isolate
 
 ## Installation
 
+### Automated (recommended)
+
 ```bash
 make install          # Installs Docker, container-use, and Python env via uv
 cp .env.example .env  # Add OPENROUTER_API_KEY
 ```
+
+### Manual
+
+1. Install dependencies:
+   - [Docker](https://docs.docker.com/get-docker/)
+   - [container-use](https://github.com/dagger/container-use#installation)
+   - [uv](https://docs.astral.sh/uv/getting-started/installation/)
+
+2. Install Python dependencies:
+   ```bash
+   uv sync
+   ```
+
+3. Configure environment:
+   ```bash
+   cp .env.example .env  # Add your OPENROUTER_API_KEY to .env
+   ```
 
 ## Usage
 
