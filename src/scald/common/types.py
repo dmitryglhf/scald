@@ -20,14 +20,14 @@ class AgentResult(BaseModel):
     error: Optional[str] = Field(default=None, description="Error if failed")
 
 
-class Solution(BaseModel):
+class ActorSolution(BaseModel):
     """Solution from Actor."""
 
     predictions_path: Optional[Path] = Field(default=None, description="Path to predictions CSV")
     metrics: dict[str, float] = Field(default_factory=dict, description="Performance metrics")
 
 
-class Evaluation(BaseModel):
+class CriticEvaluation(BaseModel):
     """Evaluation from Critic."""
 
     score: int = Field(ge=0, le=1, description="0=reject, 1=accept")
@@ -38,7 +38,7 @@ class FinalResult(BaseModel):
     """Final result from Orchestrator."""
 
     success: bool = Field(description="Task completed successfully")
-    solution: Optional[Solution] = Field(default=None, description="Final solution")
+    solution: Optional[ActorSolution] = Field(default=None, description="Final solution")
     iterations: int = Field(description="Actor-Critic iterations")
     report_path: Optional[Path] = Field(default=None, description="Path to report")
     predictions_path: Optional[Path] = Field(default=None, description="Path to predictions")

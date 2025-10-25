@@ -3,7 +3,7 @@ from typing import Type
 from pydantic import BaseModel
 
 from scald.agents.base import BaseAgent
-from scald.common.types import Evaluation, Solution
+from scald.common.types import ActorSolution, CriticEvaluation
 
 
 class Critic(BaseAgent):
@@ -15,9 +15,14 @@ Evaluate data science solutions critically and provide constructive feedback.
 Use sequential thinking to assess quality thoroughly."""
 
     def _get_output_type(self) -> Type[BaseModel]:
-        return Evaluation
+        return CriticEvaluation
 
-    async def evaluate(self, solution: Solution, criteria: dict | None = None) -> Evaluation:
+    def _get_mcp_tools(self) -> list[str]:
+        return ["sequential-thinking"]
+
+    async def evaluate(
+        self, solution: ActorSolution, criteria: dict | None = None
+    ) -> CriticEvaluation:
         """Evaluate solution quality."""
         prompt = f"""Evaluate this ML solution using sequential thinking:
 - Predictions: {solution.predictions_path}
