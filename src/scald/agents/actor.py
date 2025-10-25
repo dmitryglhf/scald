@@ -4,6 +4,7 @@ from typing import Type
 from pydantic import BaseModel
 
 from scald.agents.base import BaseAgent
+from scald.common.paths import resolve_csv_path
 from scald.common.types import ActorSolution, TaskType
 from scald.mcp.registry import get_server_descriptions
 
@@ -37,11 +38,13 @@ Workflow:
         return ["container-use", "data_analysis", "data_load", "machine_learning"]
 
     async def solve_task(
-        self, csv_path: Path, target: str, task_type: TaskType, feedback: str | None = None
+        self, csv_path: str | Path, target: str, task_type: TaskType, feedback: str | None = None
     ) -> ActorSolution:
         """Solve data science task."""
+        resolved_path = resolve_csv_path(csv_path)
+
         prompt = f"""Solve {task_type.value} task:
-- CSV: {csv_path}
+- CSV: {resolved_path}
 - Target: {target}
 {f"- Previous feedback: {feedback}" if feedback else ""}
 """

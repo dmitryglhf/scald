@@ -1,6 +1,24 @@
-# SCALD
+<div align="center">
 
-Actor-Critic data science framework with MCP servers and container isolation.
+<img src="./assets/logo.png" alt="logo" width="150"/>
+
+# SCALD
+### Scalable Collaborative Agents for Data Science
+
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-black.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](https://opensource.org/licenses/MIT)
+
+</div>
+
+## Overview
+
+SCALD automates machine learning workflows using Actor-Critic agents and isolated container environments.
+
+**Key features:**
+- Automated EDA, preprocessing, and model training via Agents
+- Safe experimentation through container isolation
+- Boosting algorithms: CatBoost, LightGBM, XGBoost
+- MCP server integration for data operations
 
 ## Installation
 
@@ -12,16 +30,17 @@ cp .env.example .env  # Add OPENROUTER_API_KEY
 ## Usage
 
 ```python
-from pathlib import Path
 from scald import Scald
 from scald.common.types import TaskType
 
 scald = Scald(max_iterations=5)
 result = await scald.run(
-    csv_path=Path("data/train.csv"),
-    target="target",
+    csv_path="data/train.csv",
+    target="target_column",
     task_type=TaskType.CLASSIFICATION,
 )
+print(f"Success: {result.success}")
+print(f"Predictions: {result.predictions_path}")
 ```
 
 ## Architecture

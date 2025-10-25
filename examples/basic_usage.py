@@ -1,5 +1,4 @@
 import asyncio
-from pathlib import Path
 
 from scald.common.types import TaskType
 from scald.main import Scald
@@ -8,7 +7,7 @@ from scald.main import Scald
 async def main():
     """Example usage of SCALD framework."""
 
-    csv_path = Path("data/iris.csv")
+    csv_path = "examples/data/iris.csv"
     target = "Species"
     task_type = TaskType.CLASSIFICATION
 

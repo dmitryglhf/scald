@@ -5,6 +5,7 @@ from typing import Optional
 from scald.agents.actor import Actor
 from scald.agents.critic import Critic
 from scald.common.logger import get_logger, save_text
+from scald.common.paths import resolve_csv_path
 from scald.common.types import ActorSolution, CriticEvaluation, FinalResult, TaskType
 
 logger = get_logger()
@@ -21,8 +22,10 @@ class Scald:
         self.actor = Actor()
         self.critic = Critic()
 
-    async def run(self, csv_path: Path, target: str, task_type: TaskType) -> FinalResult:
+    async def run(self, csv_path: str | Path, target: str, task_type: TaskType) -> FinalResult:
         """Run Actor-Critic loop to solve data science task."""
+        csv_path = resolve_csv_path(csv_path)
+
         start_time = time.time()
         iterations = 0
         evaluations: list[CriticEvaluation] = []

@@ -195,3 +195,4 @@ cython_debug/
 .cursorindexingignore
 
 scald_logs/
+catboost_info/
