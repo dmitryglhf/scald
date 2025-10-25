@@ -2,7 +2,6 @@
 
 <img src="./assets/logo.svg" alt="logo" width="300"/>
 
-# SCALD
 ### Scalable Collaborative Agents for Data Science
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-white.svg)](https://www.python.org/downloads/)
