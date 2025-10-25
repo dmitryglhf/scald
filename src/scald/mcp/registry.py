@@ -25,7 +25,7 @@ MCP_SERVERS: dict[str, MCPServerConfig] = {
     ),
     # Data Science Tools
     "data_analysis": python_server("data_analysis/server.py", timeout=30, retries=3),
-    "data_load": python_server("data_load/server.py", timeout=30, retries=3),
+    "data_loading": python_server("data_loading/server.py", timeout=30, retries=3),
     "data_processing": python_server("data_processing/server.py", timeout=30, retries=3),
     "machine_learning": python_server("machine_learning/server.py", timeout=60, retries=3),
     "intelligence": python_server("intelligence/server.py", timeout=30, retries=3),

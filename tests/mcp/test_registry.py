@@ -26,7 +26,7 @@ class TestMCPServersRegistry:
         """Registry should contain all data science servers."""
         required_servers = [
             "data_analysis",
-            "data_load",
+            "data_loading",
             "data_processing",
             "machine_learning",
         ]
@@ -53,7 +53,7 @@ class TestMCPServersRegistry:
         """Python servers should have module_path set."""
         python_servers = [
             "data_analysis",
-            "data_load",
+            "data_loading",
             "data_processing",
             "machine_learning",
             "intelligence",
@@ -99,7 +99,7 @@ class TestGetMcpToolsets:
 
     def test_multiple_servers(self):
         """Should return multiple toolsets."""
-        servers = ["data_analysis", "data_load"]
+        servers = ["data_analysis", "data_loading"]
         toolsets = get_mcp_toolsets(servers)
         assert len(toolsets) == 2
         for toolset in toolsets:
@@ -112,7 +112,7 @@ class TestGetMcpToolsets:
 
     def test_actor_default_tools(self):
         """Should work with Actor's default tool list."""
-        actor_tools = ["data_analysis", "data_load", "machine_learning"]
+        actor_tools = ["data_analysis", "data_loading", "machine_learning"]
         toolsets = get_mcp_toolsets(actor_tools)
         assert len(toolsets) == 3
         for toolset in toolsets:
@@ -182,7 +182,7 @@ class TestRegistryIntegration:
         assert len(descriptions) > 0
 
         # Create toolsets for a subset
-        toolset_names = ["data_analysis", "data_load"]
+        toolset_names = ["data_analysis", "data_loading"]
         toolsets = get_mcp_toolsets(toolset_names)
         assert len(toolsets) == 2
 
