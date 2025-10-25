@@ -8,7 +8,7 @@ from scald.main import Scald
 async def main():
     """Example usage of SCALD framework."""
 
-    csv_path = Path("data/train.csv")
+    csv_path = Path("data/iris.csv")
     target = "target"
     task_type = TaskType.CLASSIFICATION
 
