@@ -52,6 +52,7 @@ async def main():
                     if predictions_output_path
                     else None,
                     "metrics": solution.metrics,
+                    "report": solution.report,
                 },
                 f,
                 indent=2,

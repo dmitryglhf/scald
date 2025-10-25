@@ -143,6 +143,9 @@ class Scald:
             report += f"""## Final Solution
 - **Predictions Path**: {solution.predictions_path}
 - **Metrics**: {solution.metrics}
+
+### Actor's Report
+{solution.report if solution.report else "No report provided"}
 """
 
         return report

@@ -25,16 +25,22 @@ Use sequential thinking to assess quality thoroughly."""
     ) -> CriticEvaluation:
         """Evaluate solution quality."""
         prompt = f"""Evaluate this ML solution using sequential thinking:
+
+ACTOR'S REPORT:
+{solution.report if solution.report else "No report provided"}
+
+RESULTS:
 - Predictions: {solution.predictions_path}
 - Metrics: {solution.metrics}
 {f"- Criteria: {criteria}" if criteria else ""}
 
 Assess:
-1. Data preprocessing quality
-2. Model selection and training
-3. Performance metrics
-4. Overall approach
+1. Data preprocessing quality (based on Actor's report)
+2. Model selection and training approach
+3. Performance metrics adequacy
+4. Overall methodology and reasoning
+5. Completeness of the solution
 
-Return score: 1 (accept) or 0 (reject with suggestions)"""
+Return score: 1 (accept) or 0 (reject with detailed suggestions for improvement)"""
 
         return await self._run_agent(prompt)

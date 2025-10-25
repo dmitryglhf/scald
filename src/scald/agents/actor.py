@@ -37,6 +37,13 @@ OUTPUT FORMAT:
 Return ActorSolution with:
 - predictions_path: "/output/predictions.csv" (required)
 - metrics: test_metrics from training function (required, e.g., {"accuracy": 0.95, "f1": 0.94})
+- report: detailed description of your work (required) - include:
+  * What data analysis you performed
+  * What preprocessing steps you applied (encoding, scaling, splitting)
+  * Which model(s) you trained and why
+  * What hyperparameters you used
+  * What results you achieved (metrics on train/test)
+  * Any challenges or issues encountered
 """
 
     def _get_output_type(self) -> Type[BaseModel]:

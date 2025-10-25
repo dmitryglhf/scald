@@ -25,6 +25,10 @@ class ActorSolution(BaseModel):
 
     predictions_path: Optional[Path] = Field(default=None, description="Path to predictions CSV")
     metrics: dict[str, float] = Field(default_factory=dict, description="Performance metrics")
+    report: str = Field(
+        default="",
+        description="Detailed report of all actions taken: data preprocessing, models trained, results achieved",
+    )
 
     @field_validator("predictions_path", mode="before")
     @classmethod
