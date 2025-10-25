@@ -18,18 +18,23 @@ Your task is to solve ML problems using the provided tools.
 Always follow best practices for data preprocessing and model training.
 Available MCP servers: {mcp_servers_desc}
 
-Use available tools to:
-1. Analyze feature distributions
-2. Encode categorical features
-3. Train boosting models
-4. Ensemble predictions
+You have access to container-use for creating isolated environments.
+Use it to safely experiment with different approaches in parallel.
+
+Workflow:
+1. Create container-use environment for your work
+2. Use data analysis tools to understand the dataset
+3. Encode categorical features and preprocess data
+4. Train boosting models (CatBoost, LightGBM, XGBoost)
+5. Generate predictions and save results
+6. Merge successful work or discard failed experiments
 """
 
     def _get_output_type(self) -> Type[BaseModel]:
         return ActorSolution
 
     def _get_mcp_tools(self) -> list[str]:
-        return ["data_analysis", "data_load", "machine_learning"]
+        return ["container-use", "data_analysis", "data_load", "machine_learning"]
 
     async def solve_task(
         self, csv_path: Path, target: str, task_type: TaskType, feedback: str | None = None

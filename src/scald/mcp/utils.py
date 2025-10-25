@@ -99,6 +99,24 @@ def npx_remote_server(
     )
 
 
+def external_server(
+    command: str,
+    args: list[str] | None = None,
+    timeout: int = 60,
+    retries: int = 3,
+) -> MCPServerConfig:
+    """Create config for external MCP server (installed system command)."""
+    server_args = args if args else ["stdio"]
+
+    return MCPServerConfig(
+        command=command,
+        args=tuple(server_args),
+        timeout=timeout,
+        retries=retries,
+        module_path=None,
+    )
+
+
 def get_server_description(module_path: str, server_name: str) -> str:
     """Import DESCRIPTION constant from server module."""
     warning_msg = "No description available"
@@ -106,7 +124,7 @@ def get_server_description(module_path: str, server_name: str) -> str:
         import importlib
 
         normalized_path = module_path.replace("/", ".").replace(".py", "")
-        module_name = f"automas.mcp.servers.{normalized_path}"
+        module_name = f"scald.mcp.servers.{normalized_path}"
         module = importlib.import_module(module_name)
 
         if hasattr(module, "DESCRIPTION"):
@@ -135,11 +153,14 @@ def validate_server_config(name: str, config: MCPServerConfig) -> None:
     if not config.args:
         raise ValueError(f"Empty args list for server '{name}'")
 
-    if config.command in ("uvx", "npx"):
+    # Skip validation for external package managers and standalone commands
+    if config.command in ("uvx", "npx", "container-use"):
         return
 
-    script_path = Path(config.args[0])
-    validate_script_path(script_path, name)
+    # Only validate file path for Python servers
+    if config.command == sys.executable:
+        script_path = Path(config.args[0])
+        validate_script_path(script_path, name)
 
 
 def create_mcp_server_stdio(name: str, config: MCPServerConfig) -> MCPServerStdio:
