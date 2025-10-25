@@ -1,0 +1,21 @@
+FROM python:3.11-slim
+
+# Install uv for fast dependency management
+RUN pip install uv
+
+# Set working directory
+WORKDIR /app
+
+# Copy project files
+COPY pyproject.toml uv.lock ./
+COPY src/ ./src/
+
+# Install dependencies
+RUN uv sync --no-dev
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
+
+# Default command runs actor_runner
+CMD ["uv", "run", "python", "-m", "scald.environment.actor_runner"]

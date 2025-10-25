@@ -16,6 +16,7 @@ dependencies = [
     "lightgbm>=4.0.0",
     "xgboost>=2.0.0",
     "optuna>=3.0.0",
+    "docker>=7.0.0",
 ]
 [dependency-groups]
 dev = [

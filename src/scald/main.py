@@ -2,24 +2,23 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from scald.agents.actor import Actor
 from scald.agents.critic import Critic
 from scald.common.logger import get_logger, save_text
 from scald.common.paths import resolve_csv_path
 from scald.common.types import ActorSolution, CriticEvaluation, FinalResult, TaskType
+from scald.environment import run_actor_in_docker
 
 logger = get_logger()
 
 
 class Scald:
-    """Actor-Critic system for data science."""
-
     def __init__(
         self,
         max_iterations: int = 5,
+        use_docker: bool = True,
     ):
         self.max_iterations = max_iterations
-        self.actor = Actor()
+        self.use_docker = use_docker
         self.critic = Critic()
 
     async def run(self, csv_path: str | Path, target: str, task_type: TaskType) -> FinalResult:
@@ -42,12 +41,23 @@ class Scald:
                 logger.info(f"Iteration {iteration + 1}/{self.max_iterations}")
 
                 logger.info("Actor solving task...")
-                solution = await self.actor.solve_task(
-                    csv_path=csv_path,
-                    target=target,
-                    task_type=task_type,
-                    feedback=feedback,
-                )
+                if self.use_docker:
+                    solution = run_actor_in_docker(
+                        csv_path=csv_path,
+                        target=target,
+                        task_type=task_type,
+                        feedback=feedback,
+                    )
+                else:
+                    from scald.agents.actor import Actor
+
+                    actor = Actor()
+                    solution = await actor.solve_task(
+                        csv_path=csv_path,
+                        target=target,
+                        task_type=task_type,
+                        feedback=feedback,
+                    )
                 logger.info(f"Actor completed: {solution}")
 
                 logger.info("Critic evaluating solution...")
