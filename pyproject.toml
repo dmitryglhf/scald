@@ -23,6 +23,7 @@ dev = [
     "ruff",
     "pytest",
     "pytest-asyncio",
+    "pytest-cov",
 ]
 docs = [
     "mkdocs",
