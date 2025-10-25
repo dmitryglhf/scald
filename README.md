@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./assets/logo.png" alt="logo" width="150"/>
+<img src="./assets/logo.svg" alt="logo" width="150"/>
 
 # SCALD
 ### Scalable Collaborative Agents for Data Science
