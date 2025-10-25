@@ -12,7 +12,7 @@ from scald.mcp.registry import get_mcp_toolsets
 
 load_dotenv()
 
-DEFAULT_MODEL = "deepseek/deepseek-r1-0528:free"
+DEFAULT_MODEL = "x-ai/grok-4-fast"
 DEFAULT_TEMPERATURE = 0.3
 DEFAULT_MAX_TOKENS = 4000
 DEFAULT_TIMEOUT = 120
