@@ -11,16 +11,15 @@ from scald.memory import MemoryManager
 def temp_db_file():
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmpfile:
         yield Path(tmpfile.name)
-        # Cleanup
         if tmpfile.name and Path(tmpfile.name).exists():
             Path(tmpfile.name).unlink()
 
 
 @pytest.fixture
 def memory_manager(temp_db_file):
-    memory = MemoryManager(persist_path=str(temp_db_file), enabled=True)
+    memory = MemoryManager(persist_path=str(temp_db_file))
     yield memory
-    memory.clear()
+    memory.clear_all()
 
 
 @pytest.fixture
@@ -39,26 +38,17 @@ def sample_critic_evaluation():
 
 
 class TestMemoryManagerInitialization:
-    def test_initialization_enabled(self, temp_db_file):
-        memory = MemoryManager(persist_path=str(temp_db_file), enabled=True)
+    def test_initialization(self, temp_db_file):
+        memory = MemoryManager(persist_path=str(temp_db_file))
 
-        assert memory.enabled is True
         assert memory.db is not None
         assert memory.actors is not None
         assert memory.critics is not None
-        assert memory.generic is not None
-
-    def test_initialization_disabled(self, temp_db_file):
-        memory = MemoryManager(persist_path=str(temp_db_file), enabled=False)
-
-        assert memory.enabled is False
-        assert memory.db is None
-        assert memory.actors is None
 
 
 class TestActorMemory:
     def test_save_actor_solution(self, memory_manager, sample_actor_solution):
-        memory_manager.save_actor_solution(
+        memory_id = memory_manager.save_actor_solution(
             solution=sample_actor_solution,
             task_type=TaskType.CLASSIFICATION,
             target="Species",
@@ -66,11 +56,13 @@ class TestActorMemory:
             accepted=True,
         )
 
-        all_memories = memory_manager.get_all(filter_metadata={"agent": "actor"})
-        assert len(all_memories) == 1
-        assert all_memories[0]["metadata"]["task_type"] == "classification"
-        assert all_memories[0]["metadata"]["target"] == "Species"
-        assert all_memories[0]["metadata"]["accepted"] is True
+        assert memory_id != ""
+        assert len(memory_manager.actors.all()) == 1
+
+        saved = memory_manager.actors.all()[0]
+        assert saved["task_type"] == "classification"
+        assert saved["target"] == "Species"
+        assert saved["accepted"] is True
 
     def test_update_actor_solution_status(self, memory_manager, sample_actor_solution):
         # Save solution as not accepted
@@ -83,8 +75,8 @@ class TestActorMemory:
         )
 
         # Verify initial status
-        all_memories = memory_manager.get_all(filter_metadata={"agent": "actor"})
-        assert all_memories[0]["metadata"]["accepted"] is False
+        saved = memory_manager.actors.all()[0]
+        assert saved["accepted"] is False
 
         # Update to accepted
         success = memory_manager.update_actor_solution_status(
@@ -97,11 +89,10 @@ class TestActorMemory:
         assert success is True
 
         # Verify updated status
-        all_memories = memory_manager.get_all(filter_metadata={"agent": "actor"})
-        assert all_memories[0]["metadata"]["accepted"] is True
+        saved = memory_manager.actors.all()[0]
+        assert saved["accepted"] is True
 
     def test_update_actor_solution_status_not_found(self, memory_manager):
-        # Try to update non-existent solution
         success = memory_manager.update_actor_solution_status(
             task_type=TaskType.CLASSIFICATION,
             target="NonExistent",
@@ -132,10 +123,9 @@ class TestActorMemory:
         )
 
         assert len(context) == 1
-        assert "text" in context[0]
-        assert "metadata" in context[0]
-        assert "id" in context[0]
-        assert context[0]["metadata"]["accepted"] is True
+        assert context[0]["task_type"] == "classification"
+        assert context[0]["target"] == "Species"
+        assert context[0]["accepted"] is True
 
     def test_actor_context_filters_by_task_type(self, memory_manager, sample_actor_solution):
         memory_manager.save_actor_solution(
@@ -169,25 +159,29 @@ class TestActorMemory:
 
         assert len(context) == 3
         # Best (accepted + highest iteration) should be first
-        assert context[0]["metadata"]["iteration"] == 5
-        assert context[0]["metadata"]["accepted"] is True
+        assert context[0]["iteration"] == 5
+        assert context[0]["accepted"] is True
+        # Second best should be last (sandwich pattern)
+        assert context[-1]["iteration"] == 3
+        assert context[-1]["accepted"] is True
 
 
 class TestCriticMemory:
     def test_save_critic_evaluation(
         self, memory_manager, sample_actor_solution, sample_critic_evaluation
     ):
-        memory_manager.save_critic_evaluation(
+        memory_id = memory_manager.save_critic_evaluation(
             evaluation=sample_critic_evaluation,
-            solution=sample_actor_solution,
             task_type=TaskType.CLASSIFICATION,
             iteration=1,
         )
 
-        all_memories = memory_manager.get_all(filter_metadata={"agent": "critic"})
-        assert len(all_memories) == 1
-        assert all_memories[0]["metadata"]["task_type"] == "classification"
-        assert all_memories[0]["metadata"]["score"] == 1
+        assert memory_id != ""
+        assert len(memory_manager.critics.all()) == 1
+
+        saved = memory_manager.critics.all()[0]
+        assert saved["task_type"] == "classification"
+        assert saved["score"] == 1
 
     def test_get_critic_context_empty(self, memory_manager):
         context = memory_manager.get_critic_context(task_type=TaskType.CLASSIFICATION, limit=3)
@@ -199,7 +193,6 @@ class TestCriticMemory:
     ):
         memory_manager.save_critic_evaluation(
             evaluation=sample_critic_evaluation,
-            solution=sample_actor_solution,
             task_type=TaskType.CLASSIFICATION,
             iteration=1,
         )
@@ -207,79 +200,40 @@ class TestCriticMemory:
         context = memory_manager.get_critic_context(task_type=TaskType.CLASSIFICATION, limit=3)
 
         assert len(context) == 1
-        assert "text" in context[0]
-        assert "metadata" in context[0]
-        assert context[0]["metadata"]["score"] == 1
+        assert context[0]["task_type"] == "classification"
+        assert context[0]["score"] == 1
 
 
-class TestGenericOperations:
-    def test_add_memory(self, memory_manager):
-        memory_id = memory_manager.add(text="Test memory text", metadata={"custom": "data"})
-
-        assert memory_id != ""
-        all_memories = memory_manager.get_all()
-        assert len(all_memories) == 1
-
-    def test_search(self, memory_manager):
-        memory_manager.add(
-            text="CatBoost classifier with high accuracy", metadata={"type": "solution"}
-        )
-
-        results = memory_manager.search(filter_metadata={"type": "solution"}, limit=5)
-        assert len(results) == 1
-
-    def test_delete(self, memory_manager):
-        memory_id = memory_manager.add(text="Test memory", metadata={"test": True})
-
-        success = memory_manager.delete(memory_id)
-        assert success is True
-
-        all_memories = memory_manager.get_all()
-        assert len(all_memories) == 0
-
-    def test_clear_all(self, memory_manager):
-        memory_manager.add("Memory 1", {"id": 1})
-        memory_manager.add("Memory 2", {"id": 2})
-
-        memory_manager.clear()
-
-        all_memories = memory_manager.get_all()
-        assert len(all_memories) == 0
-
-    def test_clear_with_filter(self, memory_manager):
-        memory_manager.add("Memory 1", {"category": "A"})
-        memory_manager.add("Memory 2", {"category": "B"})
-
-        memory_manager.clear(filter_metadata={"category": "A"})
-
-        all_memories = memory_manager.get_all()
-        assert len(all_memories) == 1
-        assert all_memories[0]["metadata"]["category"] == "B"
-
-
-class TestDisabledMemory:
-    def test_operations_when_disabled(self, temp_db_file, sample_actor_solution):
-        memory = MemoryManager(persist_path=str(temp_db_file), enabled=False)
-
-        memory.save_actor_solution(
+class TestUtilityMethods:
+    def test_clear_all(self, memory_manager, sample_actor_solution, sample_critic_evaluation):
+        # Add some data
+        memory_manager.save_actor_solution(
             solution=sample_actor_solution,
             task_type=TaskType.CLASSIFICATION,
             target="Species",
             iteration=1,
             accepted=True,
         )
+        memory_manager.save_critic_evaluation(
+            evaluation=sample_critic_evaluation,
+            task_type=TaskType.CLASSIFICATION,
+            iteration=1,
+        )
 
-        context = memory.get_actor_context(TaskType.CLASSIFICATION, "Species")
-        assert context == []
+        assert len(memory_manager.actors.all()) == 1
+        assert len(memory_manager.critics.all()) == 1
 
-        memory_id = memory.add("test", {})
-        assert memory_id == ""
+        # Clear everything
+        memory_manager.clear_all()
+
+        assert len(memory_manager.actors.all()) == 0
+        assert len(memory_manager.critics.all()) == 0
 
 
 class TestPersistence:
     def test_memory_persists_across_instances(self, temp_db_file, sample_actor_solution):
-        memory1 = MemoryManager(persist_path=str(temp_db_file), enabled=True)
-
+        # Create first instance and save data
+        memory1 = MemoryManager(persist_path=str(temp_db_file))
         memory1.save_actor_solution(
             solution=sample_actor_solution,
             task_type=TaskType.CLASSIFICATION,
@@ -290,8 +244,11 @@ class TestPersistence:
 
         del memory1
 
-        memory2 = MemoryManager(persist_path=str(temp_db_file), enabled=True)
+        # Create second instance and verify data persists
+        memory2 = MemoryManager(persist_path=str(temp_db_file))
+        context = memory2.get_actor_context(
+            task_type=TaskType.CLASSIFICATION, target="Species", limit=3
+        )
 
-        all_memories = memory2.get_all()
-        assert len(all_memories) == 1
-        assert all_memories[0]["metadata"]["target"] == "Species"
+        assert len(context) == 1
+        assert context[0]["target"] == "Species"
