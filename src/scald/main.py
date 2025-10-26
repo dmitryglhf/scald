@@ -128,7 +128,7 @@ class Scald:
             evaluations.append(evaluation)
 
             if evaluation.score == 1:
-                logger.info("Critic accepted solution!")
+                logger.info("Critic accepted solution")
 
                 # Update actor solution status to accepted
                 try:
@@ -154,7 +154,7 @@ class Scald:
     ) -> ActorSolution:
         logger.info("Actor solving task...")
 
-        if self.use_docker:
+        if self.docker_runner:
             solution = self.docker_runner.run_actor(
                 train_path=train_path,
                 test_path=test_path,
@@ -167,7 +167,7 @@ class Scald:
             from scald.agents.actor import Actor
 
             actor = Actor()
-            solution = await actor.solve_task(
+            solution: ActorSolution = await actor.solve_task(
                 train_path=train_path,
                 test_path=test_path,
                 target=target,
@@ -176,7 +176,7 @@ class Scald:
                 memory_context=memory_context,
             )
 
-        logger.info(f"Actor completed: {solution}")
+        logger.info(f"Actor completed: {solution.metrics}")
         return solution
 
     async def _run_critic(
@@ -184,7 +184,7 @@ class Scald:
     ) -> CriticEvaluation:
         logger.info("Critic evaluating solution...")
         evaluation = await self.critic.evaluate(solution, memory_context=memory_context)
-        logger.info(f"Critic evaluation: score={evaluation.score}, feedback={evaluation.feedback}")
+        logger.info(f"Critic evaluation: score={evaluation.score}")
         return evaluation
 
     def _save_report(
