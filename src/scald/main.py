@@ -27,9 +27,15 @@ class Scald:
     ):
         self.max_iterations = max_iterations
         self.use_docker = use_docker
-        self.rebuild_docker = rebuild_docker
         self.critic = Critic()
         self.memory = MemoryManager()
+
+        if self.use_docker:
+            from scald.environment.docker_runner import DockerRunner
+
+            self.docker_runner = DockerRunner(rebuild=rebuild_docker)
+        else:
+            self.docker_runner = None
 
     async def run(
         self, train_path: str | Path, test_path: str | Path, target: str, task_type: TaskType
@@ -149,10 +155,7 @@ class Scald:
         logger.info("Actor solving task...")
 
         if self.use_docker:
-            from scald.environment.docker_runner import DockerRunner
-
-            runner = DockerRunner(rebuild=self.rebuild_docker)
-            solution = runner.run_actor(
+            solution = self.docker_runner.run_actor(
                 train_path=train_path,
                 test_path=test_path,
                 target=target,
