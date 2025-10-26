@@ -8,7 +8,6 @@ from .utils import (
     get_server_description,
     npx_server,
     python_server,
-    uvx_server,
     validate_server_config,
 )
 
@@ -25,13 +24,12 @@ MCP_SERVERS: dict[str, MCPServerConfig] = {
         "@modelcontextprotocol/server-sequential-thinking", timeout=10
     ),
     # System Tools
-    "terminal-controller": uvx_server("terminal_controller", timeout=30, retries=2),
+    "file_operations": python_server("file_operations/server.py", timeout=30, retries=3),
     # Data Science Tools
+    "data_preview": python_server("data_preview/server.py", timeout=30, retries=3),
     "data_analysis": python_server("data_analysis/server.py", timeout=30, retries=3),
-    "data_loading": python_server("data_loading/server.py", timeout=30, retries=3),
     "data_processing": python_server("data_processing/server.py", timeout=30, retries=3),
     "machine_learning": python_server("machine_learning/server.py", timeout=60, retries=3),
-    "intelligence": python_server("intelligence/server.py", timeout=30, retries=3),
 }
 
 
