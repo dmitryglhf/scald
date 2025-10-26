@@ -1,11 +1,14 @@
 from pathlib import Path
-from typing import Type
+from typing import TYPE_CHECKING, Type
 
 from pydantic import BaseModel
 
 from scald.agents.base import BaseAgent
 from scald.common.paths import resolve_csv_path
 from scald.common.types import ActorSolution, TaskType
+
+if TYPE_CHECKING:
+    from tinydb.table import Document
 
 
 class Actor(BaseAgent):
@@ -74,18 +77,30 @@ DO NOT skip tool calls. DO NOT return empty results. USE THE TOOLS.
         target: str,
         task_type: TaskType,
         feedback: str | None = None,
+        memory_context: list[Document] | None = None,
     ) -> ActorSolution:
-        """Solve data science task."""
         resolved_train = resolve_csv_path(train_path)
         resolved_test = resolve_csv_path(test_path)
 
-        prompt = f"""Solve {task_type.value} task:
-- Train CSV: {resolved_train}
-- Test CSV: {resolved_test}
-- Target: {target}
-{f"- Previous feedback: {feedback}" if feedback else ""}
+        sections = [
+            f"Solve {task_type.value} task:",
+            f"- Train CSV: {resolved_train}",
+            f"- Test CSV: {resolved_test}",
+            f"- Target: {target}",
+        ]
 
-Remember: datasets are already split, use them directly for training!
-"""
+        if feedback:
+            sections.append(f"- Previous feedback: {feedback}")
 
+        if memory_context:
+            sections.append("")
+            sections.append(self._format_memory_context(memory_context))
+
+        prompt = "\n".join(sections)
         return await self._run_agent(prompt)
+
+    def _format_memory_context(self, memory_context: list[Document]) -> str:
+        lines = ["PREVIOUS SOLUTIONS:"]
+        for i, mem in enumerate(memory_context, 1):
+            lines.append(f"{i}. {mem['text']}")
+        return "\n".join(lines)

@@ -1,12 +1,16 @@
 import json
 import os
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import docker
 from docker.errors import BuildError, ContainerError, DockerException, ImageNotFound
 
 from scald.common.logger import get_logger, get_session_dir
 from scald.common.types import ActorSolution, TaskType
+
+if TYPE_CHECKING:
+    from tinydb.table import Document
 
 logger = get_logger()
 
@@ -62,49 +66,53 @@ class DockerRunner:
                 context_path=project_root,
             )
 
-    def run_actor(
-        self,
-        train_path: Path,
-        test_path: Path,
-        target: str,
-        task_type: TaskType,
-        feedback: str | None = None,
-    ) -> ActorSolution:
-        self.ensure_image_exists()
-
-        # Prepare paths (must be absolute for Docker)
+    def _prepare_directories(
+        self, train_path: Path, test_path: Path
+    ) -> tuple[Path, Path, Path, Path]:
         train_path = train_path.resolve()
         test_path = test_path.resolve()
         session_dir = get_session_dir().resolve()
+
         output_dir = (session_dir / "actor_output").resolve()
         output_dir.mkdir(exist_ok=True)
 
         logs_dir = (session_dir / "actor_logs").resolve()
         logs_dir.mkdir(exist_ok=True)
 
-        # Prepare volumes (Docker requires absolute paths)
-        # Mount parent directories of both train and test files
-        volumes = {
-            str(train_path.parent.resolve()): {"bind": "/data/train", "mode": "ro"},
-            str(test_path.parent.resolve()): {"bind": "/data/test", "mode": "ro"},
-            str(output_dir): {"bind": "/output", "mode": "rw"},
-            str(logs_dir): {"bind": "/app/scald_logs", "mode": "rw"},
-        }
+        return train_path, test_path, output_dir, logs_dir
 
-        # If train and test are in the same directory, use single mount
+    def _prepare_volumes(
+        self, train_path: Path, test_path: Path, output_dir: Path, logs_dir: Path
+    ) -> tuple[dict, str, str]:
         if train_path.parent == test_path.parent:
             volumes = {
-                str(train_path.parent.resolve()): {"bind": "/data", "mode": "ro"},
+                str(train_path.parent): {"bind": "/data", "mode": "ro"},
                 str(output_dir): {"bind": "/output", "mode": "rw"},
                 str(logs_dir): {"bind": "/app/scald_logs", "mode": "rw"},
             }
             train_docker_path = f"/data/{train_path.name}"
             test_docker_path = f"/data/{test_path.name}"
         else:
+            volumes = {
+                str(train_path.parent): {"bind": "/data/train", "mode": "ro"},
+                str(test_path.parent): {"bind": "/data/test", "mode": "ro"},
+                str(output_dir): {"bind": "/output", "mode": "rw"},
+                str(logs_dir): {"bind": "/app/scald_logs", "mode": "rw"},
+            }
             train_docker_path = f"/data/train/{train_path.name}"
             test_docker_path = f"/data/test/{test_path.name}"
 
-        # Prepare environment
+        return volumes, train_docker_path, test_docker_path
+
+    def _prepare_environment(
+        self,
+        train_docker_path: str,
+        test_docker_path: str,
+        target: str,
+        task_type: TaskType,
+        feedback: str | None,
+        memory_context: list[Document] | None,
+    ) -> dict:
         environment = {
             "TRAIN_PATH": train_docker_path,
             "TEST_PATH": test_docker_path,
@@ -117,11 +125,61 @@ class DockerRunner:
         if feedback:
             environment["FEEDBACK"] = feedback
 
+        if memory_context:
+            try:
+                environment["MEMORY_CONTEXT"] = json.dumps(memory_context)
+                logger.debug(f"Serialized {len(memory_context)} memory entries to ENV")
+            except (TypeError, ValueError) as e:
+                logger.warning(f"Failed to serialize memory context to JSON: {e}")
+
+        return environment
+
+    def _stream_container_logs(self, container) -> None:
+        import sys
+
+        for line in container.logs(stream=True, follow=True):
+            log_line = line.decode("utf-8").strip()
+            if log_line:
+                print(f"[Actor] {log_line}", file=sys.stderr)
+                logger.opt(depth=1).debug(f"[Actor] {log_line}")
+
+    def _read_solution(self, output_dir: Path) -> ActorSolution:
+        solution_file = output_dir / "solution.json"
+        if not solution_file.exists():
+            raise RuntimeError("Actor did not produce solution.json")
+
+        with open(solution_file) as f:
+            solution_data = json.load(f)
+
+        return ActorSolution(**solution_data)
+
+    def run_actor(
+        self,
+        train_path: Path,
+        test_path: Path,
+        target: str,
+        task_type: TaskType,
+        feedback: str | None = None,
+        memory_context: list[Document] | None = None,
+    ) -> ActorSolution:
+        self.ensure_image_exists()
+
+        train_path, test_path, output_dir, logs_dir = self._prepare_directories(
+            train_path, test_path
+        )
+
+        volumes, train_docker_path, test_docker_path = self._prepare_volumes(
+            train_path, test_path, output_dir, logs_dir
+        )
+
+        environment = self._prepare_environment(
+            train_docker_path, test_docker_path, target, task_type, feedback, memory_context
+        )
+
         logger.info(f"Running Actor in Docker container for {task_type.value} task")
         logger.debug(f"Train: {train_path}, Test: {test_path}, Target: {target}")
 
         try:
-            # Run container
             container = self.client.containers.run(
                 image=self.image_name,
                 volumes=volumes,
@@ -131,38 +189,19 @@ class DockerRunner:
                 network_mode="bridge",
             )
 
-            # Stream logs in real-time
-            import sys
+            self._stream_container_logs(container)
 
-            for line in container.logs(stream=True, follow=True):
-                log_line = line.decode("utf-8").strip()
-                if log_line:
-                    # Print to console without timestamp
-                    print(f"[Actor] {log_line}", file=sys.stderr)
-                    # Log to file with full context
-                    logger.opt(depth=1).debug(f"[Actor] {log_line}")
-
-            # Wait for completion
             result = container.wait()
             exit_code = result["StatusCode"]
-
-            # Remove container
             container.remove()
 
             if exit_code != 0:
                 logger.error(f"Actor container exited with code {exit_code}")
                 raise RuntimeError(f"Actor failed with exit code {exit_code}")
 
-            # Read results from output directory
-            solution_file = output_dir / "solution.json"
-            if not solution_file.exists():
-                raise RuntimeError("Actor did not produce solution.json")
-
-            with open(solution_file) as f:
-                solution_data = json.load(f)
-
+            solution = self._read_solution(output_dir)
             logger.info("Actor completed successfully in Docker container")
-            return ActorSolution(**solution_data)
+            return solution
 
         except ContainerError as e:
             logger.error(f"Container execution failed: {e}")
@@ -173,10 +212,12 @@ class DockerRunner:
 
 
 def run_actor_in_docker(
-    csv_path: Path,
+    train_path: Path,
+    test_path: Path,
     target: str,
     task_type: TaskType,
     feedback: str | None = None,
+    memory_context: list[Document] | None = None,
 ) -> ActorSolution:
     runner = DockerRunner()
-    return runner.run_actor(csv_path, target, task_type, feedback)
+    return runner.run_actor(train_path, test_path, target, task_type, feedback, memory_context)

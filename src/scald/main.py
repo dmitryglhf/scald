@@ -1,6 +1,6 @@
 import time
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 
@@ -10,6 +10,10 @@ from scald.common.np_parsers import predictions_to_numpy
 from scald.common.paths import resolve_csv_path
 from scald.common.report import generate_report
 from scald.common.types import ActorSolution, CriticEvaluation, TaskType
+from scald.memory import MemoryManager
+
+if TYPE_CHECKING:
+    from tinydb.table import Document
 
 logger = get_logger()
 
@@ -25,6 +29,7 @@ class Scald:
         self.use_docker = use_docker
         self.rebuild_docker = rebuild_docker
         self.critic = Critic()
+        self.memory = MemoryManager()
 
     async def run(
         self, train_path: str | Path, test_path: str | Path, target: str, task_type: TaskType
@@ -70,12 +75,62 @@ class Scald:
         for iteration in range(self.max_iterations):
             logger.info(f"Iteration {iteration + 1}/{self.max_iterations}")
 
-            solution = await self._run_actor(train_path, test_path, target, task_type, feedback)
-            evaluation = await self._run_critic(solution)
+            # Get actor memory context
+            try:
+                actor_context = self.memory.get_actor_context(task_type=task_type, target=target)
+                logger.debug(f"Retrieved {len(actor_context)} actor memories")
+            except Exception as e:
+                logger.warning(f"Failed to retrieve actor memory: {e}")
+                actor_context = []
+
+            # Run actor with memory context
+            solution = await self._run_actor(
+                train_path, test_path, target, task_type, feedback, actor_context
+            )
+
+            # Save actor solution (initially not accepted)
+            try:
+                self.memory.save_actor_solution(
+                    solution=solution,
+                    task_type=task_type,
+                    target=target,
+                    iteration=iteration + 1,
+                    accepted=False,
+                )
+            except Exception as e:
+                logger.warning(f"Failed to save actor solution to memory: {e}")
+
+            # Get critic memory context
+            try:
+                critic_context = self.memory.get_critic_context(task_type=task_type)
+                logger.debug(f"Retrieved {len(critic_context)} critic memories")
+            except Exception as e:
+                logger.warning(f"Failed to retrieve critic memory: {e}")
+                critic_context = []
+
+            # Run critic with memory context
+            evaluation = await self._run_critic(solution, critic_context)
+
+            # Save critic evaluation
+            try:
+                self.memory.save_critic_evaluation(
+                    evaluation=evaluation, task_type=task_type, iteration=iteration + 1
+                )
+            except Exception as e:
+                logger.warning(f"Failed to save critic evaluation to memory: {e}")
+
             evaluations.append(evaluation)
 
             if evaluation.score == 1:
                 logger.info("Critic accepted solution!")
+
+                # Update actor solution status to accepted
+                try:
+                    self.memory.update_actor_solution_status(
+                        task_type=task_type, target=target, iteration=iteration + 1, accepted=True
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to update actor solution status: {e}")
                 break
 
             feedback = evaluation.feedback
@@ -89,6 +144,7 @@ class Scald:
         target: str,
         task_type: TaskType,
         feedback: Optional[str],
+        memory_context: list[Document],
     ) -> ActorSolution:
         logger.info("Actor solving task...")
 
@@ -102,6 +158,7 @@ class Scald:
                 target=target,
                 task_type=task_type,
                 feedback=feedback,
+                memory_context=memory_context,
             )
         else:
             from scald.agents.actor import Actor
@@ -113,14 +170,17 @@ class Scald:
                 target=target,
                 task_type=task_type,
                 feedback=feedback,
+                memory_context=memory_context,
             )
 
         logger.info(f"Actor completed: {solution}")
         return solution
 
-    async def _run_critic(self, solution: ActorSolution) -> CriticEvaluation:
+    async def _run_critic(
+        self, solution: ActorSolution, memory_context: list[Document]
+    ) -> CriticEvaluation:
         logger.info("Critic evaluating solution...")
-        evaluation = await self.critic.evaluate(solution)
+        evaluation = await self.critic.evaluate(solution, memory_context=memory_context)
         logger.info(f"Critic evaluation: score={evaluation.score}, feedback={evaluation.feedback}")
         return evaluation
 

@@ -4,11 +4,14 @@ import os
 import shutil
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from scald.agents.actor import Actor
 from scald.common.logger import get_logger
 from scald.common.types import ActorSolution, TaskType
+
+if TYPE_CHECKING:
+    from tinydb.table import Document
 
 logger = get_logger()
 
@@ -49,6 +52,7 @@ async def run_actor_task(
     task_type: TaskType,
     output_dir: Path,
     feedback: Optional[str] = None,
+    memory_context: Optional[list[Document]] = None,
 ) -> ActorSolution:
     """Run Actor to solve task and save results."""
     actor = Actor()
@@ -58,6 +62,7 @@ async def run_actor_task(
         target=target,
         task_type=task_type,
         feedback=feedback,
+        memory_context=memory_context,
     )
 
     # Copy predictions file and update path
@@ -80,11 +85,24 @@ async def main():
     task_type_str = os.getenv("TASK_TYPE", "classification")
     output_dir = Path(os.getenv("OUTPUT_DIR", "/output"))
     feedback = os.getenv("FEEDBACK")
+    memory_context_json = os.getenv("MEMORY_CONTEXT")
 
     task_type = TaskType(task_type_str)
 
+    # Deserialize memory context if provided
+    memory_context = None
+    if memory_context_json:
+        try:
+            memory_dicts = json.loads(memory_context_json)
+            memory_context = [Document(mem, doc_id=mem.get("doc_id")) for mem in memory_dicts]
+            logger.info(f"Loaded {len(memory_context)} memory entries")
+        except json.JSONDecodeError as e:
+            logger.warning(f"Failed to parse memory context: {e}")
+
     try:
-        await run_actor_task(train_path, test_path, target, task_type, output_dir, feedback)
+        await run_actor_task(
+            train_path, test_path, target, task_type, output_dir, feedback, memory_context
+        )
         logger.info("Actor completed successfully")
         sys.exit(0)
     except Exception as e:
