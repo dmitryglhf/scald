@@ -77,3 +77,11 @@ class FinalResult(BaseModel):
     iterations: int = Field(description="Actor-Critic iterations")
     report_path: Optional[Path] = Field(default=None, description="Path to report")
     predictions_path: Optional[Path] = Field(default=None, description="Path to predictions")
+
+
+class CostBreakdown(BaseModel):
+    """Price of entire execution"""
+
+    total_price: float
+    input_price: float
+    output_price: float
