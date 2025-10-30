@@ -6,7 +6,7 @@ import polars as pl
 from scald.agents.actor import Actor
 from scald.agents.critic import Critic
 from scald.common.logger import get_logger
-from scald.common.types import ActorSolution, TaskType
+from scald.common.types import ActorSolution, CriticEvaluation, TaskType
 from scald.memory import MemoryManager
 
 logger = get_logger(__name__)
@@ -52,16 +52,17 @@ class Scald:
         )
         logger.info(f"Saved iteration 1 to memory: {entry_id}")
 
+        self._update_agents_memory(actor_solution, critic_evaluation, iteration=1)
+
         # Check if first iteration was accepted
         if critic_evaluation.score == 1:
             logger.info("Solution accepted on iteration 1")
             return self._extract_predictions(actor_solution)
 
-        # Subsequent iterations with memory
         feedback = critic_evaluation.feedback
 
         for iteration in range(2, self.max_iterations + 1):
-            logger.info(f"Starting iteration {iteration} (with memory context)")
+            logger.info(f"Iteration {iteration}/{self.max_iterations}")
 
             actor_solution = await self.actor.solve_task(
                 train_path=train_path,
@@ -80,7 +81,9 @@ class Scald:
                 task_type=task_type.value,
                 iteration=iteration,
             )
-            logger.info(f"Saved iteration {iteration} to memory: {entry_id}")
+            logger.info(f"Saved to memory: {entry_id}")
+
+            self._update_agents_memory(actor_solution, critic_evaluation, iteration)
 
             if critic_evaluation.score == 1:
                 logger.info(f"Solution accepted on iteration {iteration}")
@@ -105,6 +108,15 @@ class Scald:
         self.actor.memory_context = actor_memory
         self.critic.memory_context = critic_memory
         logger.info(f"Retrieved {len(actor_memory)} memory entries")
+
+    def _update_agents_memory(
+        self,
+        actor_solution: ActorSolution,
+        critic_evaluation: CriticEvaluation,
+        iteration: int,
+    ) -> None:
+        """Update agents' memory contexts with current iteration results"""
+        raise NotImplementedError
 
     def _extract_predictions(self, solution: ActorSolution) -> np.ndarray:
         """Extract predictions as numpy array"""
