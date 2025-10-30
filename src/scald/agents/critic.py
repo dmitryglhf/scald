@@ -10,6 +10,10 @@ from scald.memory.types import CriticMemoryContext
 class Critic(BaseAgent):
     """Reviewer agent."""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.memory_context: list = []  # Will be populated by Scald
+
     def _get_system_prompt(self) -> str:
         return """You are an expert ML reviewer.
 Evaluate data science solutions critically and provide constructive feedback.
@@ -34,7 +38,6 @@ Return score: 1 (accept) or 0 (reject with detailed suggestions for improvement)
         self,
         solution: ActorSolution,
         criteria: Optional[dict] = None,
-        memory_context: Optional[list[CriticMemoryContext]] = None,
     ) -> CriticEvaluation:
         """Evaluate solution quality."""
         sections = [
@@ -49,9 +52,9 @@ Return score: 1 (accept) or 0 (reject with detailed suggestions for improvement)
         if criteria:
             sections.append(f"- Criteria: {criteria}")
 
-        if memory_context:
+        if self.memory_context:
             sections.append("")
-            sections.append(self._format_memory_context(memory_context))
+            sections.append(self._format_memory_context(self.memory_context))
 
         prompt = "\n".join(sections)
         return await self._run_agent(prompt)

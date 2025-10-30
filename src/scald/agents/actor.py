@@ -1,15 +1,20 @@
 from pathlib import Path
-from typing import Type
+from typing import Optional, Type
 
 from pydantic import BaseModel
 
 from scald.agents.base import BaseAgent
 from scald.common.paths import resolve_csv_path
 from scald.common.types import ActorSolution, TaskType
+from scald.memory.types import ActorMemoryContext
 
 
 class Actor(BaseAgent):
     """Data scientist agent."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.memory_context: list = []
 
     def _get_system_prompt(self) -> str:
         return """You are an expert data scientist. You MUST use the provided tools to solve ML tasks.
@@ -80,7 +85,6 @@ DO NOT skip tool calls. DO NOT return empty results. USE THE TOOLS.
         target: str,
         task_type: TaskType,
         feedback: Optional[str] = None,
-        memory_context: Optional[list[ActorMemoryContext]] = None,
     ) -> ActorSolution:
         resolved_train = resolve_csv_path(train_path)
         resolved_test = resolve_csv_path(test_path)
@@ -95,9 +99,9 @@ DO NOT skip tool calls. DO NOT return empty results. USE THE TOOLS.
         if feedback:
             sections.append(f"- Previous feedback: {feedback}")
 
-        if memory_context:
+        if self.memory_context:
             sections.append("")
-            sections.append(self._format_memory_context(memory_context))
+            sections.append(self._format_memory_context(self.memory_context))
 
         prompt = "\n".join(sections)
         return await self._run_agent(prompt)

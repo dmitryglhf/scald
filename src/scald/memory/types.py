@@ -1,27 +1,38 @@
-from pydantic import BaseModel, Field
+from datetime import datetime
+
+from pydantic import BaseModel
+
+
+class MemoryEntry(BaseModel):
+    """Single memory entry stored in ChromaDB"""
+
+    entry_id: str
+    timestamp: datetime
+
+    task_type: str
+    actor_report: str
+
+    critic_feedback: str
+
+    iteration: int
+    accepted: bool
+    metrics: dict[str, float]
 
 
 class ActorMemoryContext(BaseModel):
-    id: str
-    task_type: str
-    target: str
+    """Memory context passed to Actor agent"""
+
     iteration: int
     accepted: bool
-    timestamp: str
+    actions_summary: str
+    feedback_received: str
     metrics: dict[str, float]
-    report: str
-
-    class Config:
-        frozen = True
 
 
 class CriticMemoryContext(BaseModel):
-    id: str
-    task_type: str
-    iteration: int
-    score: int = Field(ge=0, le=1)
-    timestamp: str
-    feedback: str
+    """Memory context passed to Critic agent"""
 
-    class Config:
-        frozen = True
+    iteration: int
+    score: int
+    actions_observed: str
+    feedback_given: str
