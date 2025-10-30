@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
@@ -13,7 +15,7 @@ from scald.common.types import ActorSolution, CriticEvaluation, TaskType
 from scald.memory import MemoryManager
 
 if TYPE_CHECKING:
-    from tinydb.table import Document
+    from scald.memory.types import ActorMemoryContext, CriticMemoryContext
 
 logger = get_logger()
 
@@ -150,7 +152,7 @@ class Scald:
         target: str,
         task_type: TaskType,
         feedback: Optional[str],
-        memory_context: list[Document],
+        memory_context: list[ActorMemoryContext],
     ) -> ActorSolution:
         logger.info("Actor solving task...")
 
@@ -180,7 +182,7 @@ class Scald:
         return solution
 
     async def _run_critic(
-        self, solution: ActorSolution, memory_context: list[Document]
+        self, solution: ActorSolution, memory_context: list[CriticMemoryContext]
     ) -> CriticEvaluation:
         logger.info("Critic evaluating solution...")
         evaluation = await self.critic.evaluate(solution, memory_context=memory_context)

@@ -4,14 +4,11 @@ import os
 import shutil
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 from scald.agents.actor import Actor
 from scald.common.logger import get_logger
 from scald.common.types import ActorSolution, TaskType
-
-if TYPE_CHECKING:
-    from tinydb.table import Document
 
 logger = get_logger()
 
@@ -52,7 +49,7 @@ async def run_actor_task(
     task_type: TaskType,
     output_dir: Path,
     feedback: Optional[str] = None,
-    memory_context: Optional[list[Document]] = None,
+    memory_context: Optional[list[ActorMemoryContext]] = None,
 ) -> ActorSolution:
     """Run Actor to solve task and save results."""
     actor = Actor()
@@ -94,7 +91,7 @@ async def main():
     if memory_context_json:
         try:
             memory_dicts = json.loads(memory_context_json)
-            memory_context = [Document(mem, doc_id=mem.get("doc_id")) for mem in memory_dicts]
+            memory_context = [ActorMemoryContext(**mem) for mem in memory_dicts]
             logger.info(f"Loaded {len(memory_context)} memory entries")
         except json.JSONDecodeError as e:
             logger.warning(f"Failed to parse memory context: {e}")

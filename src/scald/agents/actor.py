@@ -1,14 +1,11 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, Type
+from typing import Type
 
 from pydantic import BaseModel
 
 from scald.agents.base import BaseAgent
 from scald.common.paths import resolve_csv_path
 from scald.common.types import ActorSolution, TaskType
-
-if TYPE_CHECKING:
-    from tinydb.table import Document
 
 
 class Actor(BaseAgent):
@@ -82,8 +79,8 @@ DO NOT skip tool calls. DO NOT return empty results. USE THE TOOLS.
         test_path: str | Path,
         target: str,
         task_type: TaskType,
-        feedback: str | None = None,
-        memory_context: list[Document] | None = None,
+        feedback: Optional[str] = None,
+        memory_context: Optional[list[ActorMemoryContext]] = None,
     ) -> ActorSolution:
         resolved_train = resolve_csv_path(train_path)
         resolved_test = resolve_csv_path(test_path)
@@ -105,8 +102,11 @@ DO NOT skip tool calls. DO NOT return empty results. USE THE TOOLS.
         prompt = "\n".join(sections)
         return await self._run_agent(prompt)
 
-    def _format_memory_context(self, memory_context: list[Document]) -> str:
+    def _format_memory_context(self, memory_context: list[ActorMemoryContext]) -> str:
         lines = ["PREVIOUS SOLUTIONS:"]
         for i, mem in enumerate(memory_context, 1):
-            lines.append(f"{i}. {mem['text']}")
+            lines.append(f"{i}. Iteration {mem.iteration} (accepted={mem.accepted}):")
+            lines.append(f"   Metrics: {mem.metrics}")
+            lines.append(f"   Report: {mem.report}")
+            lines.append("")
         return "\n".join(lines)

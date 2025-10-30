@@ -1,14 +1,10 @@
-from typing import TYPE_CHECKING, Type
+from typing import Optional, Type
 
 from pydantic import BaseModel
 
 from scald.agents.base import BaseAgent
-from scald.common.types import CriticEvaluation
-
-if TYPE_CHECKING:
-    from tinydb.table import Document
-
-    from scald.common.types import ActorSolution
+from scald.common.types import ActorSolution, CriticEvaluation
+from scald.memory.types import CriticMemoryContext
 
 
 class Critic(BaseAgent):
@@ -37,8 +33,8 @@ Return score: 1 (accept) or 0 (reject with detailed suggestions for improvement)
     async def evaluate(
         self,
         solution: ActorSolution,
-        criteria: dict | None = None,
-        memory_context: list[Document] | None = None,
+        criteria: Optional[dict] = None,
+        memory_context: Optional[list[CriticMemoryContext]] = None,
     ) -> CriticEvaluation:
         """Evaluate solution quality."""
         sections = [
@@ -60,10 +56,11 @@ Return score: 1 (accept) or 0 (reject with detailed suggestions for improvement)
         prompt = "\n".join(sections)
         return await self._run_agent(prompt)
 
-    def _format_memory_context(self, memory_context: list[Document]) -> str:
+    def _format_memory_context(self, memory_context: list[CriticMemoryContext]) -> str:
         lines = ["EVALUATION STANDARDS (from previous iterations):"]
         for i, mem in enumerate(memory_context, 1):
-            lines.append(f"{i}. {mem['text']}")
-        lines.append("")
+            lines.append(f"{i}. Iteration {mem.iteration} (score={mem.score}):")
+            lines.append(f"   Feedback: {mem.feedback}")
+            lines.append("")
         lines.append("Apply consistent standards when evaluating this solution.")
         return "\n".join(lines)

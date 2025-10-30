@@ -1,5 +1,5 @@
+import shutil
 import tempfile
-from pathlib import Path
 
 import pytest
 
@@ -8,16 +8,15 @@ from scald.memory import MemoryManager
 
 
 @pytest.fixture
-def temp_db_file():
-    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmpfile:
-        yield Path(tmpfile.name)
-        if tmpfile.name and Path(tmpfile.name).exists():
-            Path(tmpfile.name).unlink()
+def temp_db_path():
+    temp_dir = tempfile.mkdtemp()
+    yield temp_dir
+    shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 @pytest.fixture
-def memory_manager(temp_db_file):
-    memory = MemoryManager(persist_path=str(temp_db_file))
+def memory_manager(temp_db_path):
+    memory = MemoryManager(persist_path=temp_db_path, use_jina=False)
     yield memory
     memory.clear_all()
 
@@ -38,10 +37,10 @@ def sample_critic_evaluation():
 
 
 class TestMemoryManagerInitialization:
-    def test_initialization(self, temp_db_file):
-        memory = MemoryManager(persist_path=str(temp_db_file))
+    def test_initialization(self, temp_db_path):
+        memory = MemoryManager(persist_path=temp_db_path, use_jina=False)
 
-        assert memory.db is not None
+        assert memory.client is not None
         assert memory.actors is not None
         assert memory.critics is not None
 
@@ -57,15 +56,17 @@ class TestActorMemory:
         )
 
         assert memory_id != ""
-        assert len(memory_manager.actors.all()) == 1
+        assert memory_manager.actors.count() == 1
 
-        saved = memory_manager.actors.all()[0]
-        assert saved["task_type"] == "classification"
-        assert saved["target"] == "Species"
-        assert saved["accepted"] is True
+        contexts = memory_manager.get_actor_context(
+            task_type=TaskType.CLASSIFICATION, target="Species"
+        )
+        assert len(contexts) == 1
+        assert contexts[0].task_type == "classification"
+        assert contexts[0].target == "Species"
+        assert contexts[0].accepted is True
 
     def test_update_actor_solution_status(self, memory_manager, sample_actor_solution):
-        # Save solution as not accepted
         memory_manager.save_actor_solution(
             solution=sample_actor_solution,
             task_type=TaskType.CLASSIFICATION,
@@ -74,11 +75,11 @@ class TestActorMemory:
             accepted=False,
         )
 
-        # Verify initial status
-        saved = memory_manager.actors.all()[0]
-        assert saved["accepted"] is False
+        contexts = memory_manager.get_actor_context(
+            task_type=TaskType.CLASSIFICATION, target="Species"
+        )
+        assert contexts[0].accepted is False
 
-        # Update to accepted
         success = memory_manager.update_actor_solution_status(
             task_type=TaskType.CLASSIFICATION,
             target="Species",
@@ -88,9 +89,10 @@ class TestActorMemory:
 
         assert success is True
 
-        # Verify updated status
-        saved = memory_manager.actors.all()[0]
-        assert saved["accepted"] is True
+        contexts = memory_manager.get_actor_context(
+            task_type=TaskType.CLASSIFICATION, target="Species"
+        )
+        assert contexts[0].accepted is True
 
     def test_update_actor_solution_status_not_found(self, memory_manager):
         success = memory_manager.update_actor_solution_status(
@@ -123,9 +125,9 @@ class TestActorMemory:
         )
 
         assert len(context) == 1
-        assert context[0]["task_type"] == "classification"
-        assert context[0]["target"] == "Species"
-        assert context[0]["accepted"] is True
+        assert context[0].task_type == "classification"
+        assert context[0].target == "Species"
+        assert context[0].accepted is True
 
     def test_actor_context_filters_by_task_type(self, memory_manager, sample_actor_solution):
         memory_manager.save_actor_solution(
@@ -142,15 +144,14 @@ class TestActorMemory:
 
         assert len(context) == 0
 
-    def test_actor_context_sandwich_pattern(self, memory_manager, sample_actor_solution):
-        # Add 5 solutions with different iterations and acceptance
+    def test_actor_context_sorting(self, memory_manager, sample_actor_solution):
         for i in range(5):
             memory_manager.save_actor_solution(
                 solution=sample_actor_solution,
                 task_type=TaskType.CLASSIFICATION,
                 target="Species",
                 iteration=i + 1,
-                accepted=(i % 2 == 0),  # 1st, 3rd, 5th accepted
+                accepted=(i % 2 == 0),
             )
 
         context = memory_manager.get_actor_context(
@@ -158,18 +159,12 @@ class TestActorMemory:
         )
 
         assert len(context) == 3
-        # Best (accepted + highest iteration) should be first
-        assert context[0]["iteration"] == 5
-        assert context[0]["accepted"] is True
-        # Second best should be last (sandwich pattern)
-        assert context[-1]["iteration"] == 3
-        assert context[-1]["accepted"] is True
+        assert context[0].iteration == 5
+        assert context[0].accepted is True
 
 
 class TestCriticMemory:
-    def test_save_critic_evaluation(
-        self, memory_manager, sample_actor_solution, sample_critic_evaluation
-    ):
+    def test_save_critic_evaluation(self, memory_manager, sample_critic_evaluation):
         memory_id = memory_manager.save_critic_evaluation(
             evaluation=sample_critic_evaluation,
             task_type=TaskType.CLASSIFICATION,
@@ -177,20 +172,19 @@ class TestCriticMemory:
         )
 
         assert memory_id != ""
-        assert len(memory_manager.critics.all()) == 1
+        assert memory_manager.critics.count() == 1
 
-        saved = memory_manager.critics.all()[0]
-        assert saved["task_type"] == "classification"
-        assert saved["score"] == 1
+        contexts = memory_manager.get_critic_context(task_type=TaskType.CLASSIFICATION)
+        assert len(contexts) == 1
+        assert contexts[0].task_type == "classification"
+        assert contexts[0].score == 1
 
     def test_get_critic_context_empty(self, memory_manager):
         context = memory_manager.get_critic_context(task_type=TaskType.CLASSIFICATION, limit=3)
 
         assert context == []
 
-    def test_get_critic_context_with_memories(
-        self, memory_manager, sample_actor_solution, sample_critic_evaluation
-    ):
+    def test_get_critic_context_with_memories(self, memory_manager, sample_critic_evaluation):
         memory_manager.save_critic_evaluation(
             evaluation=sample_critic_evaluation,
             task_type=TaskType.CLASSIFICATION,
@@ -200,13 +194,12 @@ class TestCriticMemory:
         context = memory_manager.get_critic_context(task_type=TaskType.CLASSIFICATION, limit=3)
 
         assert len(context) == 1
-        assert context[0]["task_type"] == "classification"
-        assert context[0]["score"] == 1
+        assert context[0].task_type == "classification"
+        assert context[0].score == 1
 
 
 class TestUtilityMethods:
     def test_clear_all(self, memory_manager, sample_actor_solution, sample_critic_evaluation):
-        # Add some data
         memory_manager.save_actor_solution(
             solution=sample_actor_solution,
             task_type=TaskType.CLASSIFICATION,
@@ -220,20 +213,18 @@ class TestUtilityMethods:
             iteration=1,
         )
 
-        assert len(memory_manager.actors.all()) == 1
-        assert len(memory_manager.critics.all()) == 1
+        assert memory_manager.actors.count() == 1
+        assert memory_manager.critics.count() == 1
 
-        # Clear everything
         memory_manager.clear_all()
 
-        assert len(memory_manager.actors.all()) == 0
-        assert len(memory_manager.critics.all()) == 0
+        assert memory_manager.actors.count() == 0
+        assert memory_manager.critics.count() == 0
 
 
 class TestPersistence:
-    def test_memory_persists_across_instances(self, temp_db_file, sample_actor_solution):
-        # Create first instance and save data
-        memory1 = MemoryManager(persist_path=str(temp_db_file))
+    def test_memory_persists_across_instances(self, temp_db_path, sample_actor_solution):
+        memory1 = MemoryManager(persist_path=temp_db_path, use_jina=False)
         memory1.save_actor_solution(
             solution=sample_actor_solution,
             task_type=TaskType.CLASSIFICATION,
@@ -244,11 +235,10 @@ class TestPersistence:
 
         del memory1
 
-        # Create second instance and verify data persists
-        memory2 = MemoryManager(persist_path=str(temp_db_file))
+        memory2 = MemoryManager(persist_path=temp_db_path, use_jina=False)
         context = memory2.get_actor_context(
             task_type=TaskType.CLASSIFICATION, target="Species", limit=3
         )
 
         assert len(context) == 1
-        assert context[0]["target"] == "Species"
+        assert context[0].target == "Species"

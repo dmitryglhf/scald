@@ -1,27 +1,67 @@
-import uuid
-from pathlib import Path
+from __future__ import annotations
 
-from tinydb import Query, TinyDB
-from tinydb.table import Document, Table
+from pathlib import Path
+from typing import TYPE_CHECKING, Optional
+
+import chromadb
+from chromadb.config import Settings
 
 from scald.common.logger import get_logger
 from scald.common.types import ActorSolution, CriticEvaluation, TaskType
+from scald.memory.actor_memory import ActorMemory
+from scald.memory.critic_memory import CriticMemory
+
+if TYPE_CHECKING:
+    from scald.memory.types import ActorMemoryContext, CriticMemoryContext
 
 logger = get_logger()
 
 
 class MemoryManager:
-    def __init__(self, persist_path: str = "./scald_memory.json"):
-        self.persist_path = Path(persist_path)
-        self.persist_path.parent.mkdir(parents=True, exist_ok=True)
+    def __init__(
+        self,
+        persist_path: Optional[str] = None,
+        use_jina: bool = True,
+        jina_api_key: Optional[str] = None,
+        jina_model: str = "jina-embeddings-v3",
+    ):
+        if persist_path is None:
+            persist_path = str(Path.cwd() / "data" / "chroma")
 
-        self.db: TinyDB = TinyDB(str(self.persist_path))
-        self.actors: Table = self.db.table("actors")
-        self.critics: Table = self.db.table("critics")
-
-        logger.info(
-            f"MemoryManager initialized: {len(self.actors)} actors, {len(self.critics)} critics"
+        self.client = chromadb.PersistentClient(
+            path=persist_path,
+            settings=Settings(
+                anonymized_telemetry=False,
+                allow_reset=True,
+            ),
         )
+
+        if use_jina:
+            try:
+                embedding_function = self._create_jina_embedding_function(
+                    api_key=jina_api_key,
+                    model_name=jina_model,
+                )
+                logger.info("Using Jina AI embeddings")
+            except ValueError as e:
+                logger.warning(f"Jina AI not available: {e}. Falling back to default embeddings")
+                embedding_function = self._create_default_embedding_function()
+        else:
+            embedding_function = self._create_default_embedding_function()
+
+        self.actors = ActorMemory(
+            client=self.client,
+            collection_name="actor_solutions",
+            embedding_function=embedding_function,
+        )
+
+        self.critics = CriticMemory(
+            client=self.client,
+            collection_name="critic_evaluations",
+            embedding_function=embedding_function,
+        )
+
+        logger.debug(f"MemoryManager initialized at {persist_path}")
 
     def save_actor_solution(
         self,
@@ -29,104 +69,59 @@ class MemoryManager:
         task_type: TaskType,
         target: str,
         iteration: int,
-        accepted: bool = False,
+        accepted: bool,
     ) -> str:
-        """Save actor solution and return memory ID."""
-        memory_id = str(uuid.uuid4())
+        return self.actors.save(solution, task_type, target, iteration, accepted)
 
-        self.actors.insert(
-            {
-                "id": memory_id,
-                "task_type": task_type.value,
-                "target": target,
-                "iteration": iteration,
-                "accepted": accepted,
-                "text": self._format_actor_text(solution, task_type, target),
-                "metrics": solution.metrics,
-            }
-        )
-
-        logger.debug(f"Saved actor solution: {task_type.value}/{target}, iter={iteration}")
-        return memory_id
-
-    def get_actor_context(self, task_type: TaskType, target: str, limit: int = 3) -> list[Document]:
-        """Get top actor solutions with sandwich pattern."""
-        Q = Query()
-        results = self.actors.search((Q.task_type == task_type.value) & (Q.target == target))
-
-        # Sort: accepted first, then most recent
-        sorted_results = sorted(
-            results,
-            key=lambda x: (x.get("accepted", False), x.get("iteration", 0)),
-            reverse=True,
-        )[:limit]
-
-        # Sandwich pattern: best at start and end to avoid "lost in the middle"
-        if len(sorted_results) >= 3:
-            sorted_results = [sorted_results[0], *sorted_results[2:], sorted_results[1]]
-
-        logger.debug(f"Retrieved {len(sorted_results)} actor memories for {task_type.value}")
-        return sorted_results
+    def get_actor_context(
+        self,
+        task_type: TaskType,
+        target: str,
+        limit: int = 3,
+        query_text: Optional[str] = None,
+    ) -> list[ActorMemoryContext]:
+        return self.actors.search(task_type, target, query_text, limit)
 
     def update_actor_solution_status(
         self, task_type: TaskType, target: str, iteration: int, accepted: bool
     ) -> bool:
-        """Update accepted status for a specific actor solution."""
-        Q = Query()
-        updated = self.actors.update(
-            {"accepted": accepted},
-            (Q.task_type == task_type.value) & (Q.target == target) & (Q.iteration == iteration),
-        )
-
-        if updated:
-            logger.debug(f"Updated actor solution: {task_type.value}/{target}, iter={iteration}")
-            return True
-        return False
+        return self.actors.update_status(task_type, target, iteration, accepted)
 
     def save_critic_evaluation(
         self, evaluation: CriticEvaluation, task_type: TaskType, iteration: int
     ) -> str:
-        """Save critic evaluation and return memory ID."""
-        memory_id = str(uuid.uuid4())
+        return self.critics.save(evaluation, task_type, iteration)
 
-        self.critics.insert(
-            {
-                "id": memory_id,
-                "task_type": task_type.value,
-                "iteration": iteration,
-                "score": evaluation.score,
-                "text": self._format_critic_text(evaluation, task_type),
-            }
-        )
-
-        logger.debug(f"Saved critic evaluation: {task_type.value}, score={evaluation.score}")
-        return memory_id
-
-    def get_critic_context(self, task_type: TaskType, limit: int = 3) -> list[Document]:
-        """Get recent critic evaluations for task type."""
-        Q = Query()
-        results = self.critics.search(Q.task_type == task_type.value)
-
-        # Sort by most recent
-        sorted_results = sorted(results, key=lambda x: x.get("iteration", 0), reverse=True)[:limit]
-
-        logger.debug(f"Retrieved {len(sorted_results)} critic memories for {task_type.value}")
-        return sorted_results
+    def get_critic_context(
+        self, task_type: TaskType, limit: int = 5, query_text: Optional[str] = None
+    ) -> list[CriticMemoryContext]:
+        return self.critics.search(task_type, query_text, limit)
 
     def clear_all(self) -> None:
-        """Clear all memories (for testing/reset)."""
-        self.actors.truncate()
-        self.critics.truncate()
-        logger.info("Cleared all memories")
+        self.actors.clear()
+        self.critics.clear()
+        logger.debug("Cleared all memory")
 
-    def _format_actor_text(self, solution: ActorSolution, task_type: TaskType, target: str) -> str:
-        """Format actor solution as text."""
-        report_snippet = solution.report[:300] if solution.report else "No report"
-        metrics_str = ", ".join(f"{k}={v:.3f}" for k, v in solution.metrics.items())
-        return f"{task_type.value} on {target}: {report_snippet}. Metrics: {metrics_str}"
+    def _create_jina_embedding_function(
+        self,
+        api_key: Optional[str] = None,
+        model_name: str = "jina-embeddings-v3",
+    ):
+        if api_key is None:
+            api_key = os.getenv("JINA_API_KEY")
 
-    def _format_critic_text(self, evaluation: CriticEvaluation, task_type: TaskType) -> str:
-        """Format critic evaluation as text."""
-        status = "Accepted" if evaluation.score == 1 else "Rejected"
-        feedback_snippet = evaluation.feedback[:200] if evaluation.feedback else "No feedback"
-        return f"{task_type.value}: {status}. {feedback_snippet}"
+        if not api_key:
+            raise ValueError(
+                "Jina AI API key required. Set JINA_API_KEY env var or pass api_key parameter"
+            )
+
+        logger.debug(f"Creating Jina embedding function: {model_name}")
+
+        return embedding_functions.JinaEmbeddingFunction(
+            api_key=api_key,
+            model_name=model_name,
+        )
+
+    def _create_default_embedding_function(self):
+        logger.debug("Creating default embedding function")
+        return embedding_functions.DefaultEmbeddingFunction()

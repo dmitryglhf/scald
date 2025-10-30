@@ -1,16 +1,12 @@
 import json
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import docker
 from docker.errors import BuildError, ContainerError, DockerException, ImageNotFound
 
 from scald.common.logger import get_logger, get_session_dir
 from scald.common.types import ActorSolution, TaskType
-
-if TYPE_CHECKING:
-    from tinydb.table import Document
 
 logger = get_logger()
 
@@ -111,7 +107,7 @@ class DockerRunner:
         target: str,
         task_type: TaskType,
         feedback: str | None,
-        memory_context: list[Document] | None,
+        memory_context: Optional[list[ActorMemoryContext]],
     ) -> dict:
         environment = {
             "TRAIN_PATH": train_docker_path,
@@ -127,7 +123,9 @@ class DockerRunner:
 
         if memory_context:
             try:
-                environment["MEMORY_CONTEXT"] = json.dumps(memory_context)
+                # Serialize Pydantic models to dict
+                memory_dicts = [mem.model_dump() for mem in memory_context]
+                environment["MEMORY_CONTEXT"] = json.dumps(memory_dicts)
                 logger.debug(f"Serialized {len(memory_context)} memory entries to ENV")
             except (TypeError, ValueError) as e:
                 logger.warning(f"Failed to serialize memory context to JSON: {e}")
@@ -160,7 +158,7 @@ class DockerRunner:
         target: str,
         task_type: TaskType,
         feedback: str | None = None,
-        memory_context: list[Document] | None = None,
+        memory_context: list[dict[str, Any]] | None = None,
     ) -> ActorSolution:
         self.ensure_image_exists()
 
@@ -217,7 +215,7 @@ def run_actor_in_docker(
     target: str,
     task_type: TaskType,
     feedback: str | None = None,
-    memory_context: list[Document] | None = None,
+    memory_context: list[dict[str, Any]] | None = None,
 ) -> ActorSolution:
     runner = DockerRunner()
     return runner.run_actor(train_path, test_path, target, task_type, feedback, memory_context)

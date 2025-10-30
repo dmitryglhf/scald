@@ -21,7 +21,7 @@ dependencies = [
     "xgboost>=2.0.0",
     "optuna>=3.0.0",
     "docker>=7.0.0",
-    "tinydb>=4.8.0",
+    "chromadb>=0.5.0",
     "genai-prices>=0.0.35",
 ]
 [dependency-groups]
