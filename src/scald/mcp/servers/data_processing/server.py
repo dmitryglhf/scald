@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Annotated, Any, Optional
 
@@ -63,13 +64,22 @@ async def encode_categorical_label(
     file_path: Annotated[str, Field(description="Path to CSV file")],
     columns: Annotated[list[str], Field(description="Columns to encode")],
     output_path: Annotated[str, Field(description="Path to save encoded data")],
+    save_mappings: Annotated[bool, Field(description="Save mappings to files")] = True,
+    mappings_dir: Annotated[
+        Optional[str], Field(description="Directory to save mapping files")
+    ] = None,
 ) -> dict:
-    """Label encode categorical columns."""
+    """Label encode categorical columns.
+
+    Automatically saves encoding mappings to JSON files for later decoding.
+    Returns both the mappings dict and paths to saved mapping files.
+    """
     logger.info(f"[MCP:data_processing] encode_categorical_label: {columns}")
     try:
         df = pl.read_csv(Path(file_path))
 
         mappings: dict[str, dict[Any, int]] = {}
+        mapping_paths: dict[str, str] = {}
 
         for col in columns:
             if col not in df.columns:
@@ -79,14 +89,90 @@ async def encode_categorical_label(
             mapping = {val: idx for idx, val in enumerate(unique_values)}
             mappings[col] = mapping
 
-            df = df.with_columns(pl.col(col).replace(mapping).alias(col))
+            df = df.with_columns(pl.col(col).replace(mapping).cast(pl.Int64).alias(col))
+
+        df.write_csv(Path(output_path))
+
+        # Save mappings to files
+        if save_mappings:
+            if mappings_dir is None:
+                mappings_dir = "/output/encodings"
+
+            mappings_path = Path(mappings_dir)
+            mappings_path.mkdir(parents=True, exist_ok=True)
+
+            for col, mapping in mappings.items():
+                # Convert all keys to strings for JSON serialization
+                json_mapping = {str(k): v for k, v in mapping.items()}
+
+                col_mapping_path = mappings_path / f"{col}_mapping.json"
+                with open(col_mapping_path, "w") as f:
+                    json.dump(json_mapping, f, indent=2)
+
+                mapping_paths[col] = str(col_mapping_path)
+                logger.info(f"[MCP:data_processing] Saved {col} mapping to {col_mapping_path}")
+
+        return {
+            "success": True,
+            "output_path": output_path,
+            "mappings": {k: {str(key): val for key, val in v.items()} for k, v in mappings.items()},
+            "mapping_paths": mapping_paths,
+        }
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@mcp.tool(description="Decode label-encoded predictions back to original categories.")
+async def decode_categorical_label(
+    file_path: Annotated[str, Field(description="Path to CSV file with encoded predictions")],
+    column: Annotated[str, Field(description="Column name to decode")],
+    output_path: Annotated[str, Field(description="Path to save decoded data")],
+    mapping: Annotated[
+        Optional[dict[str, int]],
+        Field(description="Encoding mapping dict from encode_categorical_label"),
+    ] = None,
+    mapping_path: Annotated[Optional[str], Field(description="Path to mapping JSON file")] = None,
+) -> dict:
+    """Decode label-encoded column back to original categories.
+
+    Use this after making predictions to convert encoded integers back to original category names.
+    Provide either 'mapping' dict or 'mapping_path' to a saved JSON file.
+    """
+    logger.info(f"[MCP:data_processing] decode_categorical_label: {column}")
+    try:
+        # Load mapping from file or use provided dict
+        if mapping_path:
+            if not Path(mapping_path).exists():
+                return {"success": False, "error": f"Mapping file not found: {mapping_path}"}
+
+            with open(Path(mapping_path)) as f:
+                mapping = json.load(f)
+            logger.info(f"[MCP:data_processing] Loaded mapping from {mapping_path}")
+        elif mapping is None:
+            return {
+                "success": False,
+                "error": "Provide either 'mapping' dict or 'mapping_path' to JSON file",
+            }
+
+        df = pl.read_csv(Path(file_path))
+
+        if column not in df.columns:
+            return {"success": False, "error": f"Column {column} not found"}
+
+        # Invert the mapping: {0: 'category1', 1: 'category2', ...}
+        inverse_mapping = {v: k for k, v in mapping.items()}
+
+        # Convert column to int first in case it's stored as float
+        df = df.with_columns(pl.col(column).cast(pl.Int64).replace(inverse_mapping).alias(column))
 
         df.write_csv(Path(output_path))
 
         return {
             "success": True,
             "output_path": output_path,
-            "mappings": {k: {str(key): val for key, val in v.items()} for k, v in mappings.items()},
+            "decoded_column": column,
+            "unique_values": df[column].unique().to_list(),
         }
 
     except Exception as e:

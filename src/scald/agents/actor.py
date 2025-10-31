@@ -64,10 +64,23 @@ CRITICAL: You have access to these MCP tools - YOU MUST USE THEM:
 - file_operations: list_files, copy_file, move_file, delete_file, file_exists, get_file_info, create_directory
 - data_preview: inspect_csv, preview_csv
 - data_analysis: get_feature_distributions, get_correlations, detect_outliers, check_data_quality
-- data_processing: encode_categorical_label, handle_missing_values, train_test_split
+- data_processing: encode_categorical_label, decode_categorical_label, handle_missing_values, train_test_split
 - machine_learning: train_catboost, train_lightgbm, train_xgboost
 
 IMPORTANT: You will receive ALREADY SPLIT train and test datasets. DO NOT use train_test_split!
+
+CRITICAL - PREDICTION DECODING:
+If you encode the target column (e.g., with encode_categorical_label):
+1. The tool automatically saves mappings to /output/encodings/{column}_mapping.json
+2. After making predictions, you MUST decode them back using decode_categorical_label with mapping_path
+3. Return DECODED predictions to the user (original category names, not encoded integers)
+
+Example workflow:
+- encode_categorical_label(columns=["Species"])
+  → returns mapping_paths={"Species": "/output/encodings/Species_mapping.json"}
+- train_model(...) → predictions are [0, 1, 2, 1, 0]
+- decode_categorical_label(column="prediction", mapping_path="/output/encodings/Species_mapping.json")
+  → Final predictions: ["setosa", "versicolor", "virginica", "versicolor", "setosa"]
 
 STEP-BY-STEP WORKFLOW (FOLLOW EXACTLY):
 1. Use list_files("/data") to see available datasets (optional but recommended)

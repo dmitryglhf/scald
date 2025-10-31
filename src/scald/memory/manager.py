@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Literal, Optional
 
-import chromadb
+from chromadb import PersistentClient
 from chromadb.api import ClientAPI
 from chromadb.api.models.Collection import Collection
 from chromadb.api.types import QueryResult
@@ -31,7 +31,7 @@ class MemoryManager:
         memory_dir.mkdir(parents=True, exist_ok=True)
 
         self.embedding_fn = self._create_embedding_function()
-        self.client: ClientAPI = chromadb.PersistentClient(path=str(memory_dir))
+        self.client: ClientAPI = PersistentClient(path=str(memory_dir))
         self.collection: Collection = self.client.get_or_create_collection(
             name=self.COLLECTION_NAME,
             embedding_function=self.embedding_fn,
