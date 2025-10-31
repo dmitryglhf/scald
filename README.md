@@ -8,6 +8,7 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-white.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-white.svg)](https://opensource.org/licenses/MIT)
+[![Coverage](./.github/badges/coverage.svg)](htmlcov/index.html)
 
 </div>
 

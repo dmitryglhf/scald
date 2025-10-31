@@ -32,6 +32,7 @@ dev = [
     "pytest",
     "pytest-asyncio",
     "pytest-cov",
+    "coverage-badge>=1.1.2",
 ]
 docs = [
     "mkdocs",
@@ -59,4 +60,13 @@ disallow_untyped_calls = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "-ra -q -W ignore"
+addopts = "-ra -q -W ignore --cov=src/scald --cov-report=term-missing --cov-report=html --cov-report=json"
+
+[tool.coverage.run]
+source = ["src/scald"]
+omit = ["tests/*", "**/__pycache__/*"]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false

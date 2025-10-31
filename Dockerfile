@@ -1,27 +1,18 @@
 FROM python:3.11-slim
 
 RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-pip \
-    python3-venv \
     curl \
     ca-certificates \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
-# Set working directory
 WORKDIR /app
 
-# Copy project files
 COPY . .
 
-# Install dependencies
 RUN uv pip install --system --no-cache --break-system-packages -e . --group dev --group docs --group gaia
 
-# Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app:$PYTHONPATH
-
-# Default command runs actor_runner
-CMD ["uv", "run", "python", "-m", "scald.environment.actor_runner"]
