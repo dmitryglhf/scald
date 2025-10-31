@@ -16,10 +16,6 @@ class CriticEvaluation(BaseModel):
 class Critic(BaseAgent):
     """Reviewer agent."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.memory_context: list = []
-
     def _get_system_prompt(self) -> str:
         return """You are an expert ML reviewer.
 Evaluate data science solutions critically and provide constructive feedback.

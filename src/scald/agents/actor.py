@@ -53,10 +53,6 @@ class ActorSolution(BaseModel):
 class Actor(BaseAgent):
     """Data scientist agent."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.memory_context: list = []
-
     def _get_system_prompt(self) -> str:
         return """You are an expert data scientist. You MUST use the provided tools to solve ML tasks.
 

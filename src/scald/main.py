@@ -6,7 +6,7 @@ import polars as pl
 from pydantic import BaseModel, Field
 
 from scald.agents.actor import Actor, ActorSolution
-from scald.agents.critic import Critic, CriticEvaluation
+from scald.agents.critic import Critic
 from scald.common.logger import get_logger
 from scald.memory import MemoryManager
 
@@ -32,7 +32,7 @@ class Scald:
         self.max_iterations = max_iterations
         self.actor = Actor()
         self.critic = Critic()
-        self.memory_manager = MemoryManager()
+        self.memory_manager: MemoryManager = MemoryManager()
 
     async def run(
         self,
@@ -53,19 +53,14 @@ class Scald:
 
         critic_evaluation = await self.critic.evaluate(actor_solution)
 
-        # Retrieve and populate memory
-        await self._retrieve_and_populate_memory(actor_solution, task_type)
-
-        # Save first iteration
-        entry_id = await self.memory_manager.save_iteration(
+        # Save first iteration to long-term memory
+        entry_id = await self.memory_manager.save(
             actor_solution=actor_solution,
             critic_evaluation=critic_evaluation,
             task_type=task_type,
             iteration=1,
         )
         logger.info(f"Saved iteration 1 to memory: {entry_id}")
-
-        self._update_agents_memory(actor_solution, critic_evaluation, iteration=1)
 
         # Check if first iteration was accepted
         if critic_evaluation.score == 1:
@@ -88,15 +83,13 @@ class Scald:
             critic_evaluation = await self.critic.evaluate(actor_solution)
 
             # Save iteration
-            entry_id = await self.memory_manager.save_iteration(
+            entry_id = await self.memory_manager.save(
                 actor_solution=actor_solution,
                 critic_evaluation=critic_evaluation,
                 task_type=task_type,
                 iteration=iteration,
             )
             logger.info(f"Saved to memory: {entry_id}")
-
-            self._update_agents_memory(actor_solution, critic_evaluation, iteration)
 
             if critic_evaluation.score == 1:
                 logger.info(f"Solution accepted on iteration {iteration}")
@@ -108,28 +101,6 @@ class Scald:
             f"Max iterations ({self.max_iterations}) reached without acceptance, returning last solution"
         )
         return self._extract_predictions(actor_solution)
-
-    async def _retrieve_and_populate_memory(
-        self, actor_solution: ActorSolution, task_type: TaskType
-    ) -> None:
-        """Retrieve relevant memory and populate agents' memory contexts"""
-        actor_memory, critic_memory = await self.memory_manager.retrieve_relevant_context(
-            actor_report=actor_solution.report,
-            task_type=task_type,
-            top_k=5,
-        )
-        self.actor.memory_context = actor_memory
-        self.critic.memory_context = critic_memory
-        logger.info(f"Retrieved {len(actor_memory)} memory entries")
-
-    def _update_agents_memory(
-        self,
-        actor_solution: ActorSolution,
-        critic_evaluation: CriticEvaluation,
-        iteration: int,
-    ) -> None:
-        """Update agents' memory contexts with current iteration results"""
-        raise NotImplementedError
 
     def _extract_predictions(self, solution: ActorSolution) -> np.ndarray:
         """Extract predictions as numpy array"""
