@@ -14,7 +14,7 @@
 
 ## Overview
 
-SCALD automates machine learning workflows using Actor-Critic agents and MCP servers.
+Scald automates machine learning workflows using Actor-Critic agents and MCP servers.
 
 **Key features:**
 - Agent-driven EDA, preprocessing, and model training
