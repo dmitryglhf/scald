@@ -39,6 +39,9 @@ docs = [
     "mkdocs-material",
     "mkdocstrings[python]",
 ]
+benchmarks = [
+    "openml>=0.14.0",
+]
 
 [build-system]
 requires = ["hatchling"]

@@ -54,12 +54,13 @@ predictions = await scald.run(
 - Critic: Evaluates solutions, provides feedback, decides acceptance
 - MCP Servers: data_analysis, data_load, data_processing, machine_learning, sequential-thinking
 
+<img src="./assets/arch.svg" alt="arch"/>
 
 ## Benchmarks
 
 Performance comparison on common datasets against baseline AutoML solutions:
 
-| Dataset | Metric | SCALD | Random Forest | AutoGluon | LightAutoML |
+| Dataset | Metric | Scald | Random Forest | AutoGluon | LightAutoML |
 |---------|--------|-------|---------------|-----------|-------------|
 | Iris | Accuracy | 0.97 | 0.95 | 0.96 | 0.96 |
 | Titanic | Accuracy | 0.82 | 0.79 | 0.83 | 0.81 |
