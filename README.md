@@ -52,7 +52,7 @@ predictions = await scald.run(
 
 - Actor: Analyzes data and trains models using MCP tools
 - Critic: Evaluates solutions, provides feedback, decides acceptance
-- MCP Servers: data_analysis, data_load, data_processing, machine_learning, sequential-thinking
+- MCP Servers: data_analysis, data_preview, data_processing, machine_learning, file_operations, sequential-thinking
 
 <img src="./assets/arch.svg" alt="arch"/>
 
@@ -78,14 +78,8 @@ make format    # Format code
 make help      # Show all commands
 ```
 
-## Platform Support
-
-- Arch Linux, Ubuntu/Debian, macOS: Fully automated
-- Windows: Requires WSL2
-
 ## Requirements
 
 - Python 3.11+
-- Docker
 - uv
 - OpenRouter API key
