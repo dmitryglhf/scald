@@ -4084,6 +4084,15 @@ wheels = [
 ]
 
 [[package]]
+name = "python-toon"
+version = "0.1.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/bc/3d/543134060231e40df0280b899225378cbeea1a3ec21d13ed81a9cccc7daa/python_toon-0.1.2.tar.gz", hash = "sha256:5bbdf6d498c5524e609bec9c9ed01a3995d69be96b188d245b65701fa0d54611", size = 25167, upload-time = "2025-10-30T16:20:27.962Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6e/3f/22d9651ac06facb97e4b76409c95ca63748613088184f0a402285fd2d44f/python_toon-0.1.2-py3-none-any.whl", hash = "sha256:bc66b1e262bf3ffbf5deee1afcf7409e4a3de4978c4aa4f73ce75c73184b9695", size = 21727, upload-time = "2025-10-30T16:20:26.486Z" },
+]
+
+[[package]]
 name = "pytz"
 version = "2025.2"
 source = { registry = "https://pypi.org/simple" }
@@ -4433,6 +4442,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "pydantic-ai" },
     { name = "python-dotenv" },
+    { name = "python-toon" },
     { name = "scikit-learn" },
     { name = "xgboost" },
 ]
@@ -4465,6 +4475,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pydantic-ai", specifier = ">=1.0.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
+    { name = "python-toon", specifier = ">=0.1.2" },
     { name = "scikit-learn", specifier = ">=1.3.0" },
     { name = "xgboost", specifier = ">=2.0.0" },
 ]

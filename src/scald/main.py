@@ -26,7 +26,7 @@ class FinalResult(BaseModel):
 
 
 class Scald:
-    """Main orchestrator for Actor-Critic ML automation with long-term memory"""
+    """Main orchestrator for Actor-Critic ML automation."""
 
     def __init__(self, max_iterations: int = 5):
         self.max_iterations = max_iterations
@@ -41,55 +41,45 @@ class Scald:
         target: str,
         task_type: TaskType,
     ) -> np.ndarray:
-        """Execute Actor-Critic loop with long-term memory"""
+        """Execute Actor-Critic loop with long-term memory."""
 
-        # First iteration without memory
-        actor_solution = await self.actor.solve_task(
-            train_path=train_path,
-            test_path=test_path,
-            target=target,
+        # Retrieve relevant past experiences from similar tasks
+        actor_memory, critic_memory = await self.memory_manager.retrieve(
+            actor_report="",  # Empty query - filter only by task_type
             task_type=task_type,
+            top_k=5,
         )
+        logger.info(f"Retrieved {len(actor_memory)} relevant past experiences")
 
-        critic_evaluation = await self.critic.evaluate(actor_solution)
+        feedback = None
 
-        # Save first iteration to long-term memory
-        entry_id = await self.memory_manager.save(
-            actor_solution=actor_solution,
-            critic_evaluation=critic_evaluation,
-            task_type=task_type,
-            iteration=1,
-        )
-        logger.info(f"Saved iteration 1 to memory: {entry_id}")
-
-        # Check if first iteration was accepted
-        if critic_evaluation.score == 1:
-            logger.info("Solution accepted on iteration 1")
-            return self._extract_predictions(actor_solution)
-
-        feedback = critic_evaluation.feedback
-
-        for iteration in range(2, self.max_iterations + 1):
+        for iteration in range(1, self.max_iterations + 1):
             logger.info(f"Iteration {iteration}/{self.max_iterations}")
 
+            # Solve with feedback and past experiences
             actor_solution = await self.actor.solve_task(
                 train_path=train_path,
                 test_path=test_path,
                 target=target,
                 task_type=task_type,
                 feedback=feedback,
+                past_experiences=actor_memory,
             )
 
-            critic_evaluation = await self.critic.evaluate(actor_solution)
+            # Evaluate with past evaluation context
+            critic_evaluation = await self.critic.evaluate(
+                actor_solution,
+                past_evaluations=critic_memory,
+            )
 
-            # Save iteration
+            # Save iteration to long-term memory
             entry_id = await self.memory_manager.save(
                 actor_solution=actor_solution,
                 critic_evaluation=critic_evaluation,
                 task_type=task_type,
                 iteration=iteration,
             )
-            logger.info(f"Saved to memory: {entry_id}")
+            logger.info(f"Saved iteration {iteration} to memory: {entry_id}")
 
             if critic_evaluation.score == 1:
                 logger.info(f"Solution accepted on iteration {iteration}")

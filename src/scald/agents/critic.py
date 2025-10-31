@@ -1,9 +1,13 @@
-from typing import Optional, Type
+from typing import TYPE_CHECKING, Optional, Type
 
 from pydantic import BaseModel, Field
+from toon import encode
 
 from scald.agents.actor import ActorSolution
 from scald.agents.base import BaseAgent
+
+if TYPE_CHECKING:
+    from scald.memory.types import CriticMemoryContext
 
 
 class CriticEvaluation(BaseModel):
@@ -39,7 +43,7 @@ Return score: 1 (accept) or 0 (reject with detailed suggestions for improvement)
     async def evaluate(
         self,
         solution: ActorSolution,
-        criteria: Optional[dict] = None,
+        past_evaluations: Optional[list["CriticMemoryContext"]] = None,
     ) -> CriticEvaluation:
         """Evaluate solution quality."""
         sections = [
@@ -51,8 +55,10 @@ Return score: 1 (accept) or 0 (reject with detailed suggestions for improvement)
             f"- Metrics: {solution.metrics}",
         ]
 
-        if criteria:
-            sections.append(f"- Criteria: {criteria}")
+        if past_evaluations:
+            sections.append(
+                f"\nPast evaluations: {encode([e.model_dump() for e in past_evaluations])}"
+            )
 
         prompt = "\n".join(sections)
         return await self._run_agent(prompt)

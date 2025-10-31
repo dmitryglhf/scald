@@ -1,9 +1,13 @@
 from pathlib import Path
-from typing import Any, Literal, Optional, Type
+from typing import TYPE_CHECKING, Any, Literal, Optional, Type
 
 from pydantic import BaseModel, Field, field_validator
+from toon import encode
 
 from scald.agents.base import BaseAgent
+
+if TYPE_CHECKING:
+    from scald.memory.types import ActorMemoryContext
 
 TaskType = Literal["classification", "regression"]
 
@@ -122,6 +126,7 @@ DO NOT skip tool calls. DO NOT return empty results. USE THE TOOLS.
         target: str,
         task_type: TaskType,
         feedback: Optional[str] = None,
+        past_experiences: Optional[list["ActorMemoryContext"]] = None,
     ) -> ActorSolution:
         resolved_train = Path(train_path).expanduser().resolve()
         resolved_test = Path(test_path).expanduser().resolve()
@@ -135,6 +140,11 @@ DO NOT skip tool calls. DO NOT return empty results. USE THE TOOLS.
 
         if feedback:
             sections.append(f"- Previous feedback: {feedback}")
+
+        if past_experiences:
+            sections.append(
+                f"\nPast experiences: {encode([e.model_dump() for e in past_experiences])}"
+            )
 
         prompt = "\n".join(sections)
         return await self._run_agent(prompt)

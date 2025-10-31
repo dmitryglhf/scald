@@ -23,6 +23,7 @@ dependencies = [
     "docker>=7.0.0",
     "chromadb>=0.5.0",
     "genai-prices>=0.0.35",
+    "python-toon>=0.1.2",
 ]
 [dependency-groups]
 dev = [
