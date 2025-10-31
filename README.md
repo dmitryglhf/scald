@@ -52,7 +52,7 @@ predictions = await scald.run(
 
 - Actor: Analyzes data and trains models using MCP tools
 - Critic: Evaluates solutions, provides feedback, decides acceptance
-- MCP Servers: data_analysis, data_preview, data_processing, machine_learning, file_operations, sequential-thinking
+- MCP Servers: data-analysis, data-preview, data-processing, machine-learning, file-operations, sequential-thinking
 
 <img src="./assets/arch.svg" alt="arch"/>
 
