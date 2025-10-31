@@ -1,15 +1,28 @@
 from pathlib import Path
+from typing import Literal, Optional
 
 import numpy as np
 import polars as pl
+from pydantic import BaseModel, Field
 
-from scald.agents.actor import Actor
-from scald.agents.critic import Critic
+from scald.agents.actor import Actor, ActorSolution
+from scald.agents.critic import Critic, CriticEvaluation
 from scald.common.logger import get_logger
-from scald.common.types import ActorSolution, CriticEvaluation, TaskType
 from scald.memory import MemoryManager
 
 logger = get_logger(__name__)
+
+TaskType = Literal["classification", "regression"]
+
+
+class FinalResult(BaseModel):
+    """Final result from Orchestrator."""
+
+    success: bool = Field(description="Task completed successfully")
+    solution: Optional[ActorSolution] = Field(default=None, description="Final solution")
+    iterations: int = Field(description="Actor-Critic iterations")
+    report_path: Optional[Path] = Field(default=None, description="Path to report")
+    predictions_path: Optional[Path] = Field(default=None, description="Path to predictions")
 
 
 class Scald:
@@ -47,7 +60,7 @@ class Scald:
         entry_id = await self.memory_manager.save_iteration(
             actor_solution=actor_solution,
             critic_evaluation=critic_evaluation,
-            task_type=task_type.value,
+            task_type=task_type,
             iteration=1,
         )
         logger.info(f"Saved iteration 1 to memory: {entry_id}")
@@ -78,7 +91,7 @@ class Scald:
             entry_id = await self.memory_manager.save_iteration(
                 actor_solution=actor_solution,
                 critic_evaluation=critic_evaluation,
-                task_type=task_type.value,
+                task_type=task_type,
                 iteration=iteration,
             )
             logger.info(f"Saved to memory: {entry_id}")
@@ -102,7 +115,7 @@ class Scald:
         """Retrieve relevant memory and populate agents' memory contexts"""
         actor_memory, critic_memory = await self.memory_manager.retrieve_relevant_context(
             actor_report=actor_solution.report,
-            task_type=task_type.value,
+            task_type=task_type,
             top_k=5,
         )
         self.actor.memory_context = actor_memory

@@ -1,9 +1,17 @@
 from genai_prices import Usage, calc_price
+from pydantic import BaseModel
 
 from scald.common.logger import get_logger
-from scald.common.types import CostBreakdown
 
 logger = get_logger(__name__)
+
+
+class CostBreakdown(BaseModel):
+    """Price of entire execution"""
+
+    total_price: float
+    input_price: float
+    output_price: float
 
 
 class UsageTrackingMixin:

@@ -1,10 +1,16 @@
 from typing import Optional, Type
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from scald.agents.actor import ActorSolution
 from scald.agents.base import BaseAgent
-from scald.common.types import ActorSolution, CriticEvaluation
-from scald.memory.types import CriticMemoryContext
+
+
+class CriticEvaluation(BaseModel):
+    """Evaluation from Critic."""
+
+    score: int = Field(ge=0, le=1, description="0=reject, 1=accept")
+    feedback: str = Field(description="Feedback and suggestions")
 
 
 class Critic(BaseAgent):
@@ -12,7 +18,7 @@ class Critic(BaseAgent):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.memory_context: list = []  # Will be populated by Scald
+        self.memory_context: list = []
 
     def _get_system_prompt(self) -> str:
         return """You are an expert ML reviewer.
@@ -52,18 +58,5 @@ Return score: 1 (accept) or 0 (reject with detailed suggestions for improvement)
         if criteria:
             sections.append(f"- Criteria: {criteria}")
 
-        if self.memory_context:
-            sections.append("")
-            sections.append(self._format_memory_context(self.memory_context))
-
         prompt = "\n".join(sections)
         return await self._run_agent(prompt)
-
-    def _format_memory_context(self, memory_context: list[CriticMemoryContext]) -> str:
-        lines = ["EVALUATION STANDARDS (from previous iterations):"]
-        for i, mem in enumerate(memory_context, 1):
-            lines.append(f"{i}. Iteration {mem.iteration} (score={mem.score}):")
-            lines.append(f"   Feedback: {mem.feedback}")
-            lines.append("")
-        lines.append("Apply consistent standards when evaluating this solution.")
-        return "\n".join(lines)

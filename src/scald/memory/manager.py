@@ -1,11 +1,14 @@
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 import chromadb
 from chromadb.utils.embedding_functions import JinaEmbeddingFunction
 
-from scald.common.types import ActorSolution, CriticEvaluation
+from scald.agents.actor import ActorSolution
+from scald.agents.critic import CriticEvaluation
 from scald.memory.types import ActorMemoryContext, CriticMemoryContext, MemoryEntry
+
+TaskType = Literal["classification", "regression"]
 
 
 class MemoryManager:
@@ -21,7 +24,7 @@ class MemoryManager:
         raise NotImplementedError
 
     async def retrieve_relevant_context(
-        self, actor_report: str, task_type: str, top_k: int = 5
+        self, actor_report: str, task_type: TaskType, top_k: int = 5
     ) -> tuple[list[ActorMemoryContext], list[CriticMemoryContext]]:
         """Retrieve top-K relevant memory entries by similarity using actor's report"""
         raise NotImplementedError
@@ -30,7 +33,7 @@ class MemoryManager:
         self,
         actor_solution: ActorSolution,
         critic_evaluation: CriticEvaluation,
-        task_type: str,
+        task_type: TaskType,
         iteration: int,
     ) -> str:
         """Save single iteration result to memory"""

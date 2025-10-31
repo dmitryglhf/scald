@@ -4,8 +4,6 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from docker.errors import BuildError, DockerException, ImageNotFound
-
-from scald.common.types import TaskType
 from scald.environment.docker_runner import DockerRunner, run_actor_in_docker
 
 
@@ -105,7 +103,7 @@ class TestDockerRunner:
 
         try:
             runner.run_actor(
-                csv_path=csv_path, target="b", task_type=TaskType.CLASSIFICATION, feedback=None
+                csv_path=csv_path, target="b", task_type="classification", feedback=None
             )
 
             call_kwargs = mock_client.containers.run.call_args[1]
@@ -145,7 +143,7 @@ class TestDockerRunner:
             runner.run_actor(
                 csv_path=csv_path,
                 target="species",
-                task_type=TaskType.CLASSIFICATION,
+                task_type="classification",
                 feedback="improve accuracy",
             )
 
@@ -182,7 +180,7 @@ class TestDockerRunner:
         try:
             with pytest.raises(RuntimeError, match="Actor failed with exit code 1"):
                 runner.run_actor(
-                    csv_path=csv_path, target="b", task_type=TaskType.CLASSIFICATION, feedback=None
+                    csv_path=csv_path, target="b", task_type="classification", feedback=None
                 )
         finally:
             csv_path.unlink(missing_ok=True)
@@ -211,7 +209,7 @@ class TestDockerRunner:
         try:
             with pytest.raises(RuntimeError, match="did not produce solution.json"):
                 runner.run_actor(
-                    csv_path=csv_path, target="b", task_type=TaskType.CLASSIFICATION, feedback=None
+                    csv_path=csv_path, target="b", task_type="classification", feedback=None
                 )
         finally:
             csv_path.unlink(missing_ok=True)
@@ -231,7 +229,7 @@ class TestRunActorInDocker:
         result = run_actor_in_docker(
             csv_path=Path("/tmp/data.csv"),
             target="target",
-            task_type=TaskType.CLASSIFICATION,
+            task_type="classification",
             feedback="test feedback",
         )
 
@@ -240,6 +238,6 @@ class TestRunActorInDocker:
         call_args = mock_runner.run_actor.call_args
         assert call_args[0][0] == Path("/tmp/data.csv")
         assert call_args[0][1] == "target"
-        assert call_args[0][2] == TaskType.CLASSIFICATION
+        assert call_args[0][2] == "classification"
         assert call_args[0][3] == "test feedback"
         assert result == mock_solution

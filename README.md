@@ -37,14 +37,13 @@ cp .env.example .env  # Add your OPENROUTER_API_KEY to .env
 
 ```python
 from scald import Scald
-from scald.common.types import TaskType
 
 scald = Scald(max_iterations=5)
 predictions = await scald.run(
     train_path="data/train.csv",
     test_path="data/test.csv",
     target="target_column",
-    task_type=TaskType.CLASSIFICATION,
+    task_type="classification",
 )
 ```
 

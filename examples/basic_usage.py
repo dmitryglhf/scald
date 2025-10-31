@@ -1,6 +1,5 @@
 import asyncio
 
-from scald.common.types import TaskType
 from scald.main import Scald
 
 
@@ -11,7 +10,7 @@ async def main():
         train_path="examples/data/iris_train.csv",
         test_path="examples/data/iris_test.csv",
         target="Species",
-        task_type=TaskType.CLASSIFICATION,
+        task_type="classification",
     )
 
     print(f"Predictions shape: {predictions.shape}")

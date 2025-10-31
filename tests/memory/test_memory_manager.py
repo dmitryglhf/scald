@@ -3,7 +3,8 @@ import tempfile
 
 import pytest
 
-from scald.common.types import ActorSolution, CriticEvaluation, TaskType
+from scald.agents.actor import ActorSolution
+from scald.agents.critic import CriticEvaluation
 from scald.memory import MemoryManager
 
 
@@ -49,7 +50,7 @@ class TestActorMemory:
     def test_save_actor_solution(self, memory_manager, sample_actor_solution):
         memory_id = memory_manager.save_actor_solution(
             solution=sample_actor_solution,
-            task_type=TaskType.CLASSIFICATION,
+            task_type="classification",
             target="Species",
             iteration=1,
             accepted=True,
@@ -58,9 +59,7 @@ class TestActorMemory:
         assert memory_id != ""
         assert memory_manager.actors.count() == 1
 
-        contexts = memory_manager.get_actor_context(
-            task_type=TaskType.CLASSIFICATION, target="Species"
-        )
+        contexts = memory_manager.get_actor_context(task_type="classification", target="Species")
         assert len(contexts) == 1
         assert contexts[0].task_type == "classification"
         assert contexts[0].target == "Species"
@@ -69,19 +68,17 @@ class TestActorMemory:
     def test_update_actor_solution_status(self, memory_manager, sample_actor_solution):
         memory_manager.save_actor_solution(
             solution=sample_actor_solution,
-            task_type=TaskType.CLASSIFICATION,
+            task_type="classification",
             target="Species",
             iteration=1,
             accepted=False,
         )
 
-        contexts = memory_manager.get_actor_context(
-            task_type=TaskType.CLASSIFICATION, target="Species"
-        )
+        contexts = memory_manager.get_actor_context(task_type="classification", target="Species")
         assert contexts[0].accepted is False
 
         success = memory_manager.update_actor_solution_status(
-            task_type=TaskType.CLASSIFICATION,
+            task_type="classification",
             target="Species",
             iteration=1,
             accepted=True,
@@ -89,14 +86,12 @@ class TestActorMemory:
 
         assert success is True
 
-        contexts = memory_manager.get_actor_context(
-            task_type=TaskType.CLASSIFICATION, target="Species"
-        )
+        contexts = memory_manager.get_actor_context(task_type="classification", target="Species")
         assert contexts[0].accepted is True
 
     def test_update_actor_solution_status_not_found(self, memory_manager):
         success = memory_manager.update_actor_solution_status(
-            task_type=TaskType.CLASSIFICATION,
+            task_type="classification",
             target="NonExistent",
             iteration=999,
             accepted=True,
@@ -106,7 +101,7 @@ class TestActorMemory:
 
     def test_get_actor_context_empty(self, memory_manager):
         context = memory_manager.get_actor_context(
-            task_type=TaskType.CLASSIFICATION, target="Species", limit=3
+            task_type="classification", target="Species", limit=3
         )
 
         assert context == []
@@ -114,14 +109,14 @@ class TestActorMemory:
     def test_get_actor_context_with_memories(self, memory_manager, sample_actor_solution):
         memory_manager.save_actor_solution(
             solution=sample_actor_solution,
-            task_type=TaskType.CLASSIFICATION,
+            task_type="classification",
             target="Species",
             iteration=1,
             accepted=True,
         )
 
         context = memory_manager.get_actor_context(
-            task_type=TaskType.CLASSIFICATION, target="Species", limit=3
+            task_type="classification", target="Species", limit=3
         )
 
         assert len(context) == 1
@@ -132,15 +127,13 @@ class TestActorMemory:
     def test_actor_context_filters_by_task_type(self, memory_manager, sample_actor_solution):
         memory_manager.save_actor_solution(
             solution=sample_actor_solution,
-            task_type=TaskType.CLASSIFICATION,
+            task_type="classification",
             target="Species",
             iteration=1,
             accepted=True,
         )
 
-        context = memory_manager.get_actor_context(
-            task_type=TaskType.REGRESSION, target="Price", limit=3
-        )
+        context = memory_manager.get_actor_context(task_type="regression", target="Price", limit=3)
 
         assert len(context) == 0
 
@@ -148,14 +141,14 @@ class TestActorMemory:
         for i in range(5):
             memory_manager.save_actor_solution(
                 solution=sample_actor_solution,
-                task_type=TaskType.CLASSIFICATION,
+                task_type="classification",
                 target="Species",
                 iteration=i + 1,
                 accepted=(i % 2 == 0),
             )
 
         context = memory_manager.get_actor_context(
-            task_type=TaskType.CLASSIFICATION, target="Species", limit=3
+            task_type="classification", target="Species", limit=3
         )
 
         assert len(context) == 3
@@ -167,31 +160,31 @@ class TestCriticMemory:
     def test_save_critic_evaluation(self, memory_manager, sample_critic_evaluation):
         memory_id = memory_manager.save_critic_evaluation(
             evaluation=sample_critic_evaluation,
-            task_type=TaskType.CLASSIFICATION,
+            task_type="classification",
             iteration=1,
         )
 
         assert memory_id != ""
         assert memory_manager.critics.count() == 1
 
-        contexts = memory_manager.get_critic_context(task_type=TaskType.CLASSIFICATION)
+        contexts = memory_manager.get_critic_context(task_type="classification")
         assert len(contexts) == 1
         assert contexts[0].task_type == "classification"
         assert contexts[0].score == 1
 
     def test_get_critic_context_empty(self, memory_manager):
-        context = memory_manager.get_critic_context(task_type=TaskType.CLASSIFICATION, limit=3)
+        context = memory_manager.get_critic_context(task_type="classification", limit=3)
 
         assert context == []
 
     def test_get_critic_context_with_memories(self, memory_manager, sample_critic_evaluation):
         memory_manager.save_critic_evaluation(
             evaluation=sample_critic_evaluation,
-            task_type=TaskType.CLASSIFICATION,
+            task_type="classification",
             iteration=1,
         )
 
-        context = memory_manager.get_critic_context(task_type=TaskType.CLASSIFICATION, limit=3)
+        context = memory_manager.get_critic_context(task_type="classification", limit=3)
 
         assert len(context) == 1
         assert context[0].task_type == "classification"
@@ -202,14 +195,14 @@ class TestUtilityMethods:
     def test_clear_all(self, memory_manager, sample_actor_solution, sample_critic_evaluation):
         memory_manager.save_actor_solution(
             solution=sample_actor_solution,
-            task_type=TaskType.CLASSIFICATION,
+            task_type="classification",
             target="Species",
             iteration=1,
             accepted=True,
         )
         memory_manager.save_critic_evaluation(
             evaluation=sample_critic_evaluation,
-            task_type=TaskType.CLASSIFICATION,
+            task_type="classification",
             iteration=1,
         )
 
@@ -227,7 +220,7 @@ class TestPersistence:
         memory1 = MemoryManager(persist_path=temp_db_path, use_jina=False)
         memory1.save_actor_solution(
             solution=sample_actor_solution,
-            task_type=TaskType.CLASSIFICATION,
+            task_type="classification",
             target="Species",
             iteration=1,
             accepted=True,
@@ -236,9 +229,7 @@ class TestPersistence:
         del memory1
 
         memory2 = MemoryManager(persist_path=temp_db_path, use_jina=False)
-        context = memory2.get_actor_context(
-            task_type=TaskType.CLASSIFICATION, target="Species", limit=3
-        )
+        context = memory2.get_actor_context(task_type="classification", target="Species", limit=3)
 
         assert len(context) == 1
         assert context[0].target == "Species"

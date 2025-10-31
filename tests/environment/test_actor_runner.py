@@ -5,8 +5,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from scald.common.types import TaskType
-
 
 class TestActorRunner:
     @pytest.mark.asyncio
@@ -86,7 +84,7 @@ class TestActorRunner:
         mock_actor.solve_task.assert_called_once()
         call_kwargs = mock_actor.solve_task.call_args[1]
         assert call_kwargs["feedback"] == "reduce overfitting"
-        assert call_kwargs["task_type"] == TaskType.REGRESSION
+        assert call_kwargs["task_type"] == "regression"
 
         solution_file = output_dir / "solution.json"
         solution_file.unlink(missing_ok=True)
@@ -146,7 +144,7 @@ class TestActorRunner:
         call_kwargs = mock_actor.solve_task.call_args[1]
         assert call_kwargs["csv_path"] == Path("/data/test.csv")
         assert call_kwargs["target"] == "target"
-        assert call_kwargs["task_type"] == TaskType.CLASSIFICATION
+        assert call_kwargs["task_type"] == "classification"
         assert call_kwargs["feedback"] is None
 
         solution_file = output_dir / "solution.json"

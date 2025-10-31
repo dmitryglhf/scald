@@ -38,7 +38,7 @@ def setup_logging(
     if enable_console:
         logger.add(
             sys.stderr,
-            format="<dim>{time:YYYY-MM-DD HH:mm:ss}</dim> | <level>{level: <8}</level> | <blue>{name}</blue>:<cyan>{function}</cyan>:<magenta>{line}</magenta> - <level>{message}</level>",
+            format="<dim>{time:YYYY-MM-DD HH:mm:ss}</dim> | <level>{level: <8}</level> | <blue>{name}</blue>:<cyan>{function}</cyan>:<magenta>{line}</magenta> - {message}",
             level=log_level,
             colorize=True,
         )

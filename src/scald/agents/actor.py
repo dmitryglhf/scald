@@ -1,12 +1,53 @@
 from pathlib import Path
-from typing import Optional, Type
+from typing import Any, Literal, Optional, Type
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 from scald.agents.base import BaseAgent
-from scald.common.paths import resolve_csv_path
-from scald.common.types import ActorSolution, TaskType
-from scald.memory.types import ActorMemoryContext
+
+TaskType = Literal["classification", "regression"]
+
+
+class ActorSolution(BaseModel):
+    """Solution from Actor."""
+
+    predictions_path: Optional[Path] = Field(default=None, description="Path to predictions CSV")
+    predictions: list[Any] = Field(
+        default_factory=list, description="List of predictions on test set"
+    )
+    metrics: dict[str, float] = Field(default_factory=dict, description="Performance metrics")
+    report: str = Field(
+        default="",
+        description="Detailed report of all actions taken: data preprocessing, models trained, results achieved",
+    )
+
+    @field_validator("predictions_path", mode="before")
+    @classmethod
+    def validate_predictions_path(cls, v):
+        """Handle 'null' string and invalid paths, extract valid path from junk."""
+        if v is None:
+            return None
+
+        if isinstance(v, str):
+            # Handle explicit null/none values
+            if v.strip().lower() in ("null", "none", ""):
+                return None
+
+            # If string contains XML/reasoning junk, try to extract valid path
+            if "<" in v or ">" in v or len(v) > 500:
+                # Try to extract /output/predictions.csv pattern
+                import re
+
+                match = re.search(r"(/output/[a-zA-Z0-9_\-./]+\.csv)", v)
+                if match:
+                    return Path(match.group(1))
+                # If no valid path found, return None
+                return None
+
+            # Valid string path
+            return Path(v)
+
+        return v
 
 
 class Actor(BaseAgent):
@@ -86,11 +127,11 @@ DO NOT skip tool calls. DO NOT return empty results. USE THE TOOLS.
         task_type: TaskType,
         feedback: Optional[str] = None,
     ) -> ActorSolution:
-        resolved_train = resolve_csv_path(train_path)
-        resolved_test = resolve_csv_path(test_path)
+        resolved_train = Path(train_path).expanduser().resolve()
+        resolved_test = Path(test_path).expanduser().resolve()
 
         sections = [
-            f"Solve {task_type.value} task:",
+            f"Solve {task_type} task:",
             f"- Train CSV: {resolved_train}",
             f"- Test CSV: {resolved_test}",
             f"- Target: {target}",
@@ -99,18 +140,5 @@ DO NOT skip tool calls. DO NOT return empty results. USE THE TOOLS.
         if feedback:
             sections.append(f"- Previous feedback: {feedback}")
 
-        if self.memory_context:
-            sections.append("")
-            sections.append(self._format_memory_context(self.memory_context))
-
         prompt = "\n".join(sections)
         return await self._run_agent(prompt)
-
-    def _format_memory_context(self, memory_context: list[ActorMemoryContext]) -> str:
-        lines = ["PREVIOUS SOLUTIONS:"]
-        for i, mem in enumerate(memory_context, 1):
-            lines.append(f"{i}. Iteration {mem.iteration} (accepted={mem.accepted}):")
-            lines.append(f"   Metrics: {mem.metrics}")
-            lines.append(f"   Report: {mem.report}")
-            lines.append("")
-        return "\n".join(lines)

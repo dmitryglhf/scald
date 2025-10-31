@@ -1,7 +1,6 @@
 import asyncio
 
 from scald.agents.actor import Actor
-from scald.common.types import TaskType
 
 
 async def main():
@@ -12,7 +11,7 @@ async def main():
         train_path="examples/data/iris_train.csv",
         test_path="examples/data/iris_test.csv",
         target="Species",
-        task_type=TaskType.CLASSIFICATION,
+        task_type="classification",
     )
 
     print(f"Predictions path: {solution.predictions_path}")
