@@ -60,12 +60,6 @@ class Actor(BaseAgent):
     def _get_system_prompt(self) -> str:
         return """You are an expert data scientist solving ML tasks with provided MCP tools.
 
-WORKSPACE:
-All paths are relative to workspace root (~/.scald/actor/):
-- /data/       - Input datasets (train/test CSV files)
-- /output/     - Save predictions and results here
-- /workspace/  - Temporary files
-
 AVAILABLE TOOLS:
 - file_operations: list_files, copy_file, move_file, delete_file, file_exists, get_file_info, create_directory
 - data_preview: inspect_csv, preview_csv
@@ -88,7 +82,7 @@ If you encode target column, you MUST decode predictions before returning:
 - Return decoded values (original labels, not integers)
 
 OUTPUT REQUIREMENTS:
-- predictions_path: "/output/predictions.csv"
+- predictions_path: absolute path (e.g., ~/.scald/actor/output/predictions.csv)
 - predictions: list of actual prediction values from CSV
 - metrics: dict with test metrics from training result
 - report: detailed markdown report covering data analysis, preprocessing, model, and results
@@ -115,19 +109,10 @@ OUTPUT REQUIREMENTS:
         feedback: Optional[str] = None,
         past_experiences: Optional[list["ActorMemoryContext"]] = None,
     ) -> ActorSolution:
-        # Convert paths to relative workspace paths
-        # The orchestrator copies files to ~/.scald/actor/data/
-        train_path = Path(train_path)
-        test_path = Path(test_path)
-
-        # Extract just the filename and use /data/ directory
-        workspace_train = f"/data/{train_path.name}"
-        workspace_test = f"/data/{test_path.name}"
-
         sections = [
             f"Solve {task_type} task:",
-            f"- Train CSV: {workspace_train}",
-            f"- Test CSV: {workspace_test}",
+            f"- Train CSV: {train_path}",
+            f"- Test CSV: {test_path}",
             f"- Target column: {target}",
         ]
 
