@@ -58,7 +58,7 @@ class TestMCPServersRegistry:
             "data_analysis",
             "data_processing",
             "machine_learning",
-            "intelligence",
+            "sequential_thinking",
         ]
         for name in python_servers:
             config = MCP_SERVERS[name]

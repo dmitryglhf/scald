@@ -6,6 +6,7 @@ from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
 from scald.common.logger import get_logger
+from scald.common.workspace import ACTOR_WORKSPACE
 
 logger = get_logger()
 
@@ -21,7 +22,7 @@ Available tools:
 - Get file metadata (size, modification time)
 
 Security features:
-- Operations restricted to allowed directories only (/data, /output, /workspace)
+- Operations restricted to allowed directories only (~/data, ~/output, ~/workspace, /tmp)
 - Primarily designed for CSV file operations
 - All operations are logged
 - Path traversal protection
@@ -36,7 +37,12 @@ Use cases:
 mcp = FastMCP("file-operations", instructions=DESCRIPTION)
 
 # Security: Allowed directories for file operations
-ALLOWED_DIRECTORIES = {"/data", "/output", "/workspace", "/tmp"}
+ALLOWED_DIRECTORIES = {
+    str(ACTOR_WORKSPACE / "data"),
+    str(ACTOR_WORKSPACE / "output"),
+    str(ACTOR_WORKSPACE / "workspace"),
+    "/tmp",
+}
 
 
 def is_path_allowed(path: str | Path) -> tuple[bool, str]:
@@ -363,8 +369,6 @@ async def create_directory(
     directory: Annotated[str, Field(description="Directory path to create")],
 ) -> dict:
     """Create directory."""
-    logger.info(f"[MCP:file_operations] create_directory: {directory}")
-
     try:
         # Security check
         is_allowed, result = is_path_allowed(directory)

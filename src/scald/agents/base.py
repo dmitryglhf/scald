@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel
 from pydantic_ai import Agent, ModelSettings, RunUsage
 from pydantic_ai.models.openai import OpenAIChatModel
-from pydantic_ai.providers.openrouter import OpenRouterProvider
+from pydantic_ai.providers.openai import OpenAIProvider
 
 from scald.common.logger import get_logger
 from scald.common.mixins import UsageTrackingMixin
@@ -16,11 +16,10 @@ load_dotenv()
 
 logger = get_logger(__name__)
 
-DEFAULT_MODEL = "x-ai/grok-4-fast"
-DEFAULT_TEMPERATURE = 0.3
-DEFAULT_MAX_TOKENS = 4000
-DEFAULT_TIMEOUT = 120
-DEFAULT_RETRIES = 3
+DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gpt-oss:20b")
+DEFAULT_TEMPERATURE = float(os.getenv("DEFAULT_TEMPERATURE", 0.3))
+DEFAULT_TIMEOUT = int(os.getenv("DEFAULT_TIMEOUT", 120))
+DEFAULT_RETRIES = int(os.getenv("DEFAULT_RETRIES", 3))
 
 
 class BaseAgent(UsageTrackingMixin, ABC):
@@ -30,22 +29,14 @@ class BaseAgent(UsageTrackingMixin, ABC):
         self,
         model: str = DEFAULT_MODEL,
         temperature: float = DEFAULT_TEMPERATURE,
-        max_tokens: int = DEFAULT_MAX_TOKENS,
         timeout: int = DEFAULT_TIMEOUT,
         retries: int = DEFAULT_RETRIES,
     ):
-        self.api_key = os.getenv("OPENROUTER_API_KEY") or ""
-        if not self.api_key:
-            raise RuntimeError(
-                "No OPENROUTER_API_KEY provided. Set it in environment or pass as argument."
-            )
-
         if not 0.0 <= temperature <= 1.0:
             raise ValueError(f"Temperature must be in [0.0, 1.0], got {temperature}")
 
         self.model = model
         self.temperature = temperature
-        self.max_tokens = max_tokens
         self.timeout = timeout
         self.retries = retries
 
@@ -56,13 +47,12 @@ class BaseAgent(UsageTrackingMixin, ABC):
     def _create_model(self) -> OpenAIChatModel:
         settings = ModelSettings(
             temperature=self.temperature,
-            max_tokens=self.max_tokens,
             timeout=self.timeout,
         )
 
         return OpenAIChatModel(
             self.model,
-            provider=OpenRouterProvider(api_key=self.api_key),
+            provider=OpenAIProvider(),
             settings=settings,
         )
 

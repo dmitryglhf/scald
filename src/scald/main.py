@@ -2,12 +2,16 @@ from pathlib import Path
 from typing import Literal, Optional
 
 import numpy as np
-import polars as pl
 from pydantic import BaseModel, Field
 
 from scald.agents.actor import Actor, ActorSolution
 from scald.agents.critic import Critic
 from scald.common.logger import get_logger
+from scald.common.workspace import (
+    cleanup_workspace,
+    copy_datasets_to_workspace,
+    save_workspace_artifacts,
+)
 from scald.memory import MemoryManager
 
 logger = get_logger(__name__)
@@ -32,7 +36,7 @@ class Scald:
         self.max_iterations = max_iterations
         self.actor = Actor()
         self.critic = Critic()
-        self.memory_manager: MemoryManager = MemoryManager()
+        self.mm: MemoryManager = MemoryManager()
 
     async def run(
         self,
@@ -42,9 +46,13 @@ class Scald:
         task_type: TaskType,
     ) -> np.ndarray:
         """Execute Actor-Critic loop with long-term memory."""
+        train_path = Path(train_path).expanduser().resolve()
+        test_path = Path(test_path).expanduser().resolve()
+
+        workspace_train, workspace_test = copy_datasets_to_workspace(train_path, test_path)
 
         # Retrieve relevant past experiences from similar tasks
-        actor_memory, critic_memory = await self.memory_manager.retrieve(
+        actor_memory, critic_memory = await self.mm.retrieve(
             actor_report="",  # Empty query - filter only by task_type
             task_type=task_type,
             top_k=5,
@@ -53,53 +61,52 @@ class Scald:
 
         feedback = None
 
-        for iteration in range(1, self.max_iterations + 1):
-            logger.info(f"Iteration {iteration}/{self.max_iterations}")
+        try:
+            for iteration in range(1, self.max_iterations + 1):
+                logger.info(f"Iteration {iteration}/{self.max_iterations}")
 
-            # Solve with feedback and past experiences
-            actor_solution = await self.actor.solve_task(
-                train_path=train_path,
-                test_path=test_path,
-                target=target,
-                task_type=task_type,
-                feedback=feedback,
-                past_experiences=actor_memory,
+                actor_solution = await self.actor.solve_task(
+                    train_path=workspace_train,
+                    test_path=workspace_test,
+                    target=target,
+                    task_type=task_type,
+                    feedback=feedback,
+                    past_experiences=actor_memory,
+                )
+
+                critic_evaluation = await self.critic.evaluate(
+                    actor_solution,
+                    past_evaluations=critic_memory,
+                )
+
+                # Save iteration to long-term memory
+                entry_id = await self.mm.save(
+                    actor_solution=actor_solution,
+                    critic_evaluation=critic_evaluation,
+                    task_type=task_type,
+                    iteration=iteration,
+                )
+                logger.info(f"Saved iteration {iteration} to memory: {entry_id}")
+
+                if critic_evaluation.score == 1:
+                    logger.info(f"Solution accepted on iteration {iteration}")
+                    save_workspace_artifacts(actor_solution)
+                    return self._extract_predictions(actor_solution)
+
+                feedback = critic_evaluation.feedback
+
+            logger.warning(
+                f"Max iterations ({self.max_iterations}) reached without acceptance, returning last solution"
             )
+            save_workspace_artifacts(actor_solution)
+            return self._extract_predictions(actor_solution)
 
-            # Evaluate with past evaluation context
-            critic_evaluation = await self.critic.evaluate(
-                actor_solution,
-                past_evaluations=critic_memory,
-            )
-
-            # Save iteration to long-term memory
-            entry_id = await self.memory_manager.save(
-                actor_solution=actor_solution,
-                critic_evaluation=critic_evaluation,
-                task_type=task_type,
-                iteration=iteration,
-            )
-            logger.info(f"Saved iteration {iteration} to memory: {entry_id}")
-
-            if critic_evaluation.score == 1:
-                logger.info(f"Solution accepted on iteration {iteration}")
-                return self._extract_predictions(actor_solution)
-
-            feedback = critic_evaluation.feedback
-
-        logger.warning(
-            f"Max iterations ({self.max_iterations}) reached without acceptance, returning last solution"
-        )
-        return self._extract_predictions(actor_solution)
+        finally:
+            cleanup_workspace()
 
     def _extract_predictions(self, solution: ActorSolution) -> np.ndarray:
         """Extract predictions as numpy array"""
-        if solution.predictions:
+        try:
             return np.array(solution.predictions)
-
-        if solution.predictions_path and solution.predictions_path.exists():
-            df = pl.read_csv(solution.predictions_path)
-            if "prediction" in df.columns:
-                return df["prediction"].to_numpy()
-
-        raise ValueError("No predictions available in ActorSolution")
+        except Exception as e:
+            raise ValueError("No predictions available in ActorSolution") from e
