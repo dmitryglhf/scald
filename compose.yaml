@@ -1,0 +1,9 @@
+services:
+  scald:
+    build: .
+    volumes:
+      - ./scald_logs:/app/scald_logs
+    environment:
+      - PYTHONUNBUFFERED=1
+    stdin_open: true
+    tty: true
