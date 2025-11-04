@@ -31,7 +31,7 @@ uv sync
 
 Configure environment variables:
 ```bash
-cp .env.example .env  # Add your OPENROUTER_API_KEY to .env
+cp .env.example .env  # Add your api_key and base_url to .env
 ```
 
 ## Usage
