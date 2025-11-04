@@ -36,6 +36,14 @@ cp .env.example .env  # Add your api_key and base_url to .env
 
 ## Usage
 
+### CLI
+
+```bash
+scald --train data/train.csv --test data/test.csv --target price --task-type regression
+```
+
+### Python API
+
 ```python
 from scald import Scald
 
