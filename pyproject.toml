@@ -8,10 +8,6 @@ authors = [
     {name = "Dmitry Gilemkhanov", email = "dima.rize@yandex.ru"}
 ]
 license = {text = "MIT"}
-
-[project.scripts]
-scald = "scald.cli:main"
-
 dependencies = [
     "python-dotenv>=1.0.0",
     "pydantic>=2.0.0",
@@ -29,6 +25,10 @@ dependencies = [
     "genai-prices>=0.0.35",
     "python-toon>=0.1.2",
 ]
+
+[project.scripts]
+scald = "scald.cli:main"
+
 [dependency-groups]
 dev = [
     "mypy",
