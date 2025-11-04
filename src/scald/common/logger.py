@@ -24,15 +24,14 @@ def setup_logging(
     if _initialized and not force_reinit:
         return
 
-    # Create session directory
-    if session_name is None:
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        session_name = f"session_{timestamp}"
+    if enable_file:
+        if session_name is None:
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            session_name = f"session_{timestamp}"
 
-    _session_dir = base_log_dir / session_name
-    _session_dir.mkdir(parents=True, exist_ok=True)
+        _session_dir = base_log_dir / session_name
+        _session_dir.mkdir(parents=True, exist_ok=True)
 
-    # Configure loguru
     logger.remove()  # Remove default handler
 
     if enable_console:
@@ -58,36 +57,29 @@ def setup_logging(
 
 
 def reset_logging() -> None:
-    """Reset logging state to allow reconfiguration with new session directory."""
     global _session_dir, _initialized
 
-    logger.remove()  # Remove all handlers
+    logger.remove()
     _session_dir = None
     _initialized = False
 
 
-def get_logger(name: Optional[str] = None) -> Any:
-    """Get loguru logger. Name parameter kept for API compatibility."""
+def get_logger(enable_file: bool = True) -> Any:
     if not _initialized:
-        setup_logging()
+        setup_logging(enable_file=enable_file)
     return logger
 
 
 def get_session_dir() -> Path:
-    """Get current session directory."""
-    if _session_dir is None:
-        setup_logging()
     assert _session_dir is not None
     return _session_dir
 
 
 def get_artifact_path(filename: str) -> Path:
-    """Get path for saving artifacts in session directory."""
     return get_session_dir() / filename
 
 
 def save_json(data: Any, filename: str) -> Path:
-    """Save data as JSON in session directory."""
     if not filename.endswith(".json"):
         filename += ".json"
 
@@ -105,7 +97,6 @@ def save_json(data: Any, filename: str) -> Path:
 
 
 def save_text(content: str, filename: str) -> Path:
-    """Save text content in session directory."""
     filepath = get_artifact_path(filename)
 
     try:

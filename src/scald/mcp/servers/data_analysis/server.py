@@ -7,7 +7,7 @@ from pydantic import Field
 
 from scald.common.logger import get_logger
 
-logger = get_logger()
+logger = get_logger(enable_file=False)
 
 DESCRIPTION = """
 Exploratory Data Analysis MCP server.

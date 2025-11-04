@@ -14,7 +14,7 @@ from xgboost import XGBClassifier, XGBRegressor  # type: ignore
 
 from scald.common.logger import get_logger
 
-logger = get_logger()
+logger = get_logger(enable_file=False)
 
 DESCRIPTION = """
 Machine learning MCP server.

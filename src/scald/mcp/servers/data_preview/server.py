@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 from scald.common.logger import get_logger
 
-logger = get_logger()
+logger = get_logger(enable_file=False)
 
 DESCRIPTION = """
 Data preview MCP server for quick CSV file inspection.

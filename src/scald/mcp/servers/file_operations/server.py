@@ -8,7 +8,7 @@ from pydantic import Field
 from scald.common.logger import get_logger
 from scald.common.workspace import ACTOR_WORKSPACE
 
-logger = get_logger()
+logger = get_logger(enable_file=False)
 
 DESCRIPTION = """
 File operations MCP server for CSV workflow management.
