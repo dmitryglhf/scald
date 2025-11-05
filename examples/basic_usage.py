@@ -15,6 +15,7 @@ async def main():
         target="Species",
         task_type="classification",
     )
+    print(y_pred)
 
     # Load validation data with true labels
     val_df = pl.read_csv("examples/data/iris_val.csv")

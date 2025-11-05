@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Optional, Type
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 from toon import encode
 
 from scald.agents.base import BaseAgent
@@ -23,34 +23,6 @@ class ActorSolution(BaseModel):
         default="",
         description="Detailed report of all actions taken: data preprocessing, models trained, results achieved",
     )
-
-    @field_validator("predictions_path", mode="before")
-    @classmethod
-    def validate_predictions_path(cls, v):
-        """Handle 'null' string and invalid paths, extract valid path from junk."""
-        if v is None:
-            return None
-
-        if isinstance(v, str):
-            # Handle explicit null/none values
-            if v.strip().lower() in ("null", "none", ""):
-                return None
-
-            # If string contains XML/reasoning junk, try to extract valid path
-            if "<" in v or ">" in v or len(v) > 500:
-                # Try to extract /output/predictions.csv pattern
-                import re
-
-                match = re.search(r"(/output/[a-zA-Z0-9_\-./]+\.csv)", v)
-                if match:
-                    return Path(match.group(1))
-                # If no valid path found, return None
-                return None
-
-            # Valid string path
-            return Path(v)
-
-        return v
 
 
 class Actor(BaseAgent):
@@ -76,6 +48,8 @@ WORKFLOW:
 
 CRITICAL - Categorical Encoding:
 If you encode target column, you MUST decode predictions before returning:
+- Target in test dataset is ALWAYS empty column
+- You MUST train model/models on train dataset and return predictions on test dataset
 - encode_categorical_label saves mapping to /output/encodings/{column}_mapping.json
 - After training, decode predictions: decode_categorical_label(column="prediction", mapping_path="...")
 - Return decoded values (original labels, not integers)
@@ -83,7 +57,6 @@ If you encode target column, you MUST decode predictions before returning:
 OUTPUT REQUIREMENTS:
 - predictions_path: absolute path (e.g., ~/.scald/actor/output/predictions.csv)
 - predictions: list of actual prediction values from CSV
-- metrics: dict with test metrics from training result
 - report: detailed markdown report covering data analysis, preprocessing, model, and results
 """
 
@@ -110,8 +83,8 @@ OUTPUT REQUIREMENTS:
     ) -> ActorSolution:
         sections = [
             f"Solve {task_type} task:",
-            f"- Train CSV: {train_path}",
-            f"- Test CSV: {test_path}",
+            f"- Train Dataset CSV: {train_path}",
+            f"- Test Dataset CSV: {test_path}",
             f"- Target column: {target}",
         ]
 
