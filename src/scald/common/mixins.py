@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 from scald.common.logger import get_logger
 
-logger = get_logger(__name__)
+logger = get_logger()
 
 
 class CostBreakdown(BaseModel):

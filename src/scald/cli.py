@@ -6,7 +6,7 @@ from pathlib import Path
 from scald.common.logger import get_logger
 from scald.main import Scald
 
-logger = get_logger(__name__)
+logger = get_logger()
 
 
 def main() -> None:

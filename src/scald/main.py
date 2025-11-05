@@ -1,8 +1,7 @@
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
 
 import numpy as np
-from pydantic import BaseModel, Field
 
 from scald.agents.actor import Actor, ActorSolution
 from scald.agents.critic import Critic
@@ -14,19 +13,9 @@ from scald.common.workspace import (
 )
 from scald.memory import MemoryManager
 
-logger = get_logger(__name__)
+logger = get_logger()
 
 TaskType = Literal["classification", "regression"]
-
-
-class FinalResult(BaseModel):
-    """Final result from Orchestrator."""
-
-    success: bool = Field(description="Task completed successfully")
-    solution: Optional[ActorSolution] = Field(default=None, description="Final solution")
-    iterations: int = Field(description="Actor-Critic iterations")
-    report_path: Optional[Path] = Field(default=None, description="Path to report")
-    predictions_path: Optional[Path] = Field(default=None, description="Path to predictions")
 
 
 class Scald:

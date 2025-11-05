@@ -1,4 +1,3 @@
-import json
 import shutil
 from pathlib import Path
 from typing import Optional
@@ -6,7 +5,7 @@ from typing import Optional
 from scald.agents.actor import ActorSolution
 from scald.common.logger import get_logger, get_session_dir, save_text
 
-logger = get_logger(__name__)
+logger = get_logger()
 
 ACTOR_WORKSPACE = Path.home() / ".scald" / "actor"
 
@@ -66,13 +65,6 @@ def save_workspace_artifacts(solution: ActorSolution) -> Optional[Path]:
     if solution.report:
         report_path = save_text(solution.report, "actor_report.md")
         logger.info(f"Saved actor report to: {report_path}")
-
-    # Save metrics as JSON
-    if solution.metrics:
-        metrics_path = session_dir / "metrics.json"
-        with open(metrics_path, "w") as f:
-            json.dump(solution.metrics, f, indent=2)
-        logger.info(f"Saved metrics to: {metrics_path}")
 
     return saved_predictions_path
 

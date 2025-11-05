@@ -103,7 +103,6 @@ class MemoryManager:
             "critic_evaluation": critic_evaluation.model_dump_json(),
             "timestamp": datetime.now().isoformat(),
         }
-        metadata.update(actor_solution.metrics)
 
         self.collection.add(
             ids=[entry_id],

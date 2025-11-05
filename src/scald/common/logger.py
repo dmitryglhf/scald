@@ -44,7 +44,7 @@ def setup_logging(
 
     if enable_file:
         logger.add(
-            _session_dir / "scald.log",
+            _session_dir / "scald.log",  # type: ignore
             format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
             level=log_level,
             rotation="10 MB",

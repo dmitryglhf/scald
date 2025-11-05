@@ -9,7 +9,7 @@ from scald.main import Scald
 async def main():
     scald = Scald(max_iterations=5)
 
-    predictions = await scald.run(
+    y_pred = await scald.run(
         train_path="examples/data/iris_train.csv",
         test_path="examples/data/iris_test.csv",
         target="Species",
@@ -21,12 +21,12 @@ async def main():
     y_true = val_df["Species"].to_numpy()
 
     # Evaluate predictions
-    accuracy = accuracy_score(y_true, predictions)
+    accuracy = accuracy_score(y_true, y_pred)
 
     print("\nRESULTS")
     print(f"Accuracy: {accuracy:.4f} ({accuracy * 100:.2f}%)")
-    print(f"Correct: {(y_true == predictions).sum()}/{len(y_true)}")
-    print(f"\n{classification_report(y_true, predictions, zero_division=0)}")
+    print(f"Correct: {(y_true == y_pred).sum()}/{len(y_true)}")
+    print(f"\n{classification_report(y_true, y_pred, zero_division=0)}")
 
 
 if __name__ == "__main__":

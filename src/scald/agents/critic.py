@@ -52,7 +52,6 @@ Return score: 1 (accept) or 0 (reject with detailed suggestions for improvement)
             "",
             "RESULTS:",
             f"- Predictions: {solution.predictions_path}",
-            f"- Metrics: {solution.metrics}",
         ]
 
         if past_evaluations:

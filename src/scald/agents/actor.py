@@ -19,7 +19,6 @@ class ActorSolution(BaseModel):
     predictions: list[Any] = Field(
         default_factory=list, description="List of predictions on test set"
     )
-    metrics: dict[str, float] = Field(default_factory=dict, description="Performance metrics")
     report: str = Field(
         default="",
         description="Detailed report of all actions taken: data preprocessing, models trained, results achieved",

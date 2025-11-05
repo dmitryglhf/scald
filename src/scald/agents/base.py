@@ -14,7 +14,7 @@ from scald.mcp.registry import get_mcp_toolsets
 
 load_dotenv()
 
-logger = get_logger(__name__)
+logger = get_logger()
 
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gpt-oss:20b")
 DEFAULT_TEMPERATURE = float(os.getenv("DEFAULT_TEMPERATURE", 0.3))
