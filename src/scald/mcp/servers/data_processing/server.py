@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Annotated, Any, Optional
+from typing import Annotated, Any, Literal, Optional
 
 import polars as pl
 from fastmcp import Context, FastMCP
@@ -186,7 +186,8 @@ async def handle_missing_values(
     file_path: Annotated[str, Field(description="Path to CSV file")],
     ctx: Context,
     strategy: Annotated[
-        str, Field(description="Strategy: 'drop', 'mean', 'median', 'mode', 'zero'")
+        Literal["drop", "mean", "median", "mode", "zero"],
+        Field(description="Missing value strategy"),
     ] = "drop",
     output_path: Annotated[Optional[str], Field(description="Path to save processed data")] = None,
 ) -> dict:
@@ -284,7 +285,9 @@ async def scale_features(
     file_path: Annotated[str, Field(description="Path to CSV file")],
     columns: Annotated[list[str], Field(description="Columns to scale")],
     ctx: Context,
-    method: Annotated[str, Field(description="Method: 'minmax' or 'standard'")] = "standard",
+    method: Annotated[
+        Literal["minmax", "standard"], Field(description="Scaling method")
+    ] = "standard",
     output_path: Annotated[Optional[str], Field(description="Path to save scaled data")] = None,
 ) -> dict:
     """Scale numerical features using standard or minmax scaling.

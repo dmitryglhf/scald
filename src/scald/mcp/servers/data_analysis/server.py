@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 import polars as pl
 from fastmcp import Context, FastMCP
@@ -76,7 +76,7 @@ async def get_feature_distributions(
 async def get_correlations(
     file_path: Annotated[str, Field(description="Path to CSV file")],
     ctx: Context,
-    method: Annotated[str, Field(description="Correlation method (pearson)")] = "pearson",
+    method: Annotated[Literal["pearson"], Field(description="Correlation method")] = "pearson",
 ) -> dict:
     """Calculate correlation matrix."""
     try:

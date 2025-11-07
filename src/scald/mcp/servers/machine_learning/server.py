@@ -1,6 +1,6 @@
 import pickle
 from pathlib import Path
-from typing import Annotated, Any, Optional
+from typing import Annotated, Any, Literal, Optional
 
 import numpy as np
 import optuna
@@ -54,7 +54,7 @@ def _calculate_metrics(y_true: np.ndarray, y_pred: np.ndarray, task_type: str) -
 async def train_catboost(
     train_path: Annotated[str, Field(description="Path to train CSV file")],
     target_column: Annotated[str, Field(description="Name of the target column in CSV")],
-    task_type: Annotated[str, Field(description="Either 'classification' or 'regression'")],
+    task_type: Annotated[Literal["classification", "regression"], Field(description="Task type")],
     ctx: Context,
     test_path: Annotated[
         Optional[str], Field(description="Path to test CSV file (required for predictions)")
@@ -132,7 +132,7 @@ async def train_catboost(
 async def train_lightgbm(
     train_path: Annotated[str, Field(description="Path to train CSV file")],
     target_column: Annotated[str, Field(description="Name of the target column in CSV")],
-    task_type: Annotated[str, Field(description="Either 'classification' or 'regression'")],
+    task_type: Annotated[Literal["classification", "regression"], Field(description="Task type")],
     ctx: Context,
     test_path: Annotated[
         Optional[str], Field(description="Path to test CSV file (required for predictions)")
@@ -216,7 +216,7 @@ async def train_lightgbm(
 async def train_xgboost(
     train_path: Annotated[str, Field(description="Path to train CSV file")],
     target_column: Annotated[str, Field(description="Name of the target column in CSV")],
-    task_type: Annotated[str, Field(description="Either 'classification' or 'regression'")],
+    task_type: Annotated[Literal["classification", "regression"], Field(description="Task type")],
     ctx: Context,
     test_path: Annotated[
         Optional[str], Field(description="Path to test CSV file (required for predictions)")
@@ -299,7 +299,7 @@ async def ensemble_predictions(
     predictions_paths: Annotated[list[str], Field(description="Paths to prediction CSVs")],
     true_labels_path: Annotated[str, Field(description="Path to true labels CSV")],
     target_column: Annotated[str, Field(description="Target column name")],
-    task_type: Annotated[str, Field(description="'classification' or 'regression'")],
+    task_type: Annotated[Literal["classification", "regression"], Field(description="Task type")],
     ctx: Context,
     output_path: Annotated[
         Optional[str], Field(description="Path to save ensemble predictions")
