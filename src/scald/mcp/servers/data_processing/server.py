@@ -3,12 +3,8 @@ from pathlib import Path
 from typing import Annotated, Any, Optional
 
 import polars as pl
-from mcp.server.fastmcp import FastMCP
+from fastmcp import Context, FastMCP
 from pydantic import Field
-
-from scald.common.logger import get_logger
-
-logger = get_logger(enable_file=False)
 
 DESCRIPTION = """
 Data processing MCP server.
@@ -30,14 +26,16 @@ Features:
 mcp = FastMCP("data-processing", instructions=DESCRIPTION)
 
 
-@mcp.tool(description="Encode categorical features using one-hot encoding.")
+@mcp.tool
 async def encode_categorical_onehot(
     file_path: Annotated[str, Field(description="Path to CSV file")],
     columns: Annotated[list[str], Field(description="Columns to encode")],
     output_path: Annotated[str, Field(description="Path to save encoded data")],
+    ctx: Context,
 ) -> dict:
-    """One-hot encode categorical columns."""
-    logger.info(f"[MCP:data_processing] encode_categorical_onehot: {columns}")
+    """Encode categorical features using one-hot encoding.
+
+    One-hot encode categorical columns."""
     try:
         df = pl.read_csv(Path(file_path))
 
@@ -59,22 +57,24 @@ async def encode_categorical_onehot(
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(description="Encode categorical features using label encoding.")
+@mcp.tool
 async def encode_categorical_label(
     file_path: Annotated[str, Field(description="Path to CSV file")],
     columns: Annotated[list[str], Field(description="Columns to encode")],
     output_path: Annotated[str, Field(description="Path to save encoded data")],
+    ctx: Context,
     save_mappings: Annotated[bool, Field(description="Save mappings to files")] = True,
     mappings_dir: Annotated[
         Optional[str], Field(description="Directory to save mapping files")
     ] = None,
 ) -> dict:
-    """Label encode categorical columns.
+    """Encode categorical features using label encoding.
+
+    Label encode categorical columns.
 
     Automatically saves encoding mappings to JSON files for later decoding.
     Returns both the mappings dict and paths to saved mapping files.
     """
-    logger.info(f"[MCP:data_processing] encode_categorical_label: {columns}")
     try:
         df = pl.read_csv(Path(file_path))
 
@@ -110,7 +110,7 @@ async def encode_categorical_label(
                     json.dump(json_mapping, f, indent=2)
 
                 mapping_paths[col] = str(col_mapping_path)
-                logger.info(f"[MCP:data_processing] Saved {col} mapping to {col_mapping_path}")
+                await ctx.info(f"Saved {col} mapping to {col_mapping_path}")
 
         return {
             "success": True,
@@ -123,23 +123,25 @@ async def encode_categorical_label(
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(description="Decode label-encoded predictions back to original categories.")
+@mcp.tool
 async def decode_categorical_label(
     file_path: Annotated[str, Field(description="Path to CSV file with encoded predictions")],
     column: Annotated[str, Field(description="Column name to decode")],
     output_path: Annotated[str, Field(description="Path to save decoded data")],
+    ctx: Context,
     mapping: Annotated[
         Optional[dict[str, int]],
         Field(description="Encoding mapping dict from encode_categorical_label"),
     ] = None,
     mapping_path: Annotated[Optional[str], Field(description="Path to mapping JSON file")] = None,
 ) -> dict:
-    """Decode label-encoded column back to original categories.
+    """Decode label-encoded predictions back to original categories.
+
+    Decode label-encoded column back to original categories.
 
     Use this after making predictions to convert encoded integers back to original category names.
     Provide either 'mapping' dict or 'mapping_path' to a saved JSON file.
     """
-    logger.info(f"[MCP:data_processing] decode_categorical_label: {column}")
     try:
         # Load mapping from file or use provided dict
         if mapping_path:
@@ -148,7 +150,7 @@ async def decode_categorical_label(
 
             with open(Path(mapping_path)) as f:
                 mapping = json.load(f)
-            logger.info(f"[MCP:data_processing] Loaded mapping from {mapping_path}")
+            await ctx.info(f"Loaded mapping from {mapping_path}")
         elif mapping is None:
             return {
                 "success": False,
@@ -179,16 +181,18 @@ async def decode_categorical_label(
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(description="Handle missing values.")
+@mcp.tool
 async def handle_missing_values(
     file_path: Annotated[str, Field(description="Path to CSV file")],
+    ctx: Context,
     strategy: Annotated[
         str, Field(description="Strategy: 'drop', 'mean', 'median', 'mode', 'zero'")
     ] = "drop",
     output_path: Annotated[Optional[str], Field(description="Path to save processed data")] = None,
 ) -> dict:
-    """Handle missing values in dataset."""
-    logger.info(f"[MCP:data_processing] handle_missing_values: {strategy}")
+    """Handle missing values.
+
+    Handle missing values in dataset."""
     try:
         df = pl.read_csv(Path(file_path))
         original_rows = df.height
@@ -212,7 +216,7 @@ async def handle_missing_values(
                     mode_val = mode_result.first()
                     df = df.with_columns(pl.col(col).fill_null(mode_val))
                 else:
-                    logger.warning(f"Column {col} has no mode (all nulls?), skipping")
+                    await ctx.warning(f"Column {col} has no mode (all nulls?), skipping")
         elif strategy == "zero":
             df = df.fill_null(0)
         else:
@@ -233,15 +237,17 @@ async def handle_missing_values(
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(description="Remove outliers using IQR method.")
+@mcp.tool
 async def remove_outliers(
     file_path: Annotated[str, Field(description="Path to CSV file")],
     columns: Annotated[list[str], Field(description="Columns to check for outliers")],
+    ctx: Context,
     iqr_multiplier: Annotated[float, Field(description="IQR multiplier")] = 1.5,
     output_path: Annotated[Optional[str], Field(description="Path to save cleaned data")] = None,
 ) -> dict:
-    """Remove outliers from specified columns."""
-    logger.info(f"[MCP:data_processing] remove_outliers: {columns}")
+    """Remove outliers using IQR method.
+
+    Remove outliers from specified columns."""
     try:
         df = pl.read_csv(Path(file_path))
         original_rows = df.height
@@ -273,15 +279,17 @@ async def remove_outliers(
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(description="Scale numerical features using standard or minmax scaling.")
+@mcp.tool
 async def scale_features(
     file_path: Annotated[str, Field(description="Path to CSV file")],
     columns: Annotated[list[str], Field(description="Columns to scale")],
+    ctx: Context,
     method: Annotated[str, Field(description="Method: 'minmax' or 'standard'")] = "standard",
     output_path: Annotated[Optional[str], Field(description="Path to save scaled data")] = None,
 ) -> dict:
-    """Scale numerical features."""
-    logger.info(f"[MCP:data_processing] scale_features: {method}")
+    """Scale numerical features using standard or minmax scaling.
+
+    Scale numerical features."""
     try:
         df = pl.read_csv(Path(file_path))
 
@@ -293,14 +301,14 @@ async def scale_features(
                 mean = df[col].mean()
                 std = df[col].std()
                 if std == 0 or std is None:
-                    logger.warning(f"Column {col} has zero std, skipping scaling")
+                    await ctx.warning(f"Column {col} has zero std, skipping scaling")
                     continue
                 df = df.with_columns(((pl.col(col) - mean) / std).alias(col))
             elif method == "minmax":
                 min_val = df[col].min()
                 max_val = df[col].max()
                 if min_val == max_val:
-                    logger.warning(f"Column {col} has constant value, skipping scaling")
+                    await ctx.warning(f"Column {col} has constant value, skipping scaling")
                     continue
                 df = df.with_columns(((pl.col(col) - min_val) / (max_val - min_val)).alias(col))
             else:
@@ -308,7 +316,7 @@ async def scale_features(
 
         if output_path:
             df.write_csv(Path(output_path))
-            logger.info(f"[MCP:data_processing] Saved scaled data to {output_path}")
+            await ctx.info(f"Saved scaled data to {output_path}")
 
         return {
             "success": True,
@@ -321,16 +329,18 @@ async def scale_features(
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(description="Split dataset into train and test sets with stratified sampling.")
+@mcp.tool
 async def train_test_split(
     file_path: Annotated[str, Field(description="Path to CSV file")],
+    ctx: Context,
     test_size: Annotated[float, Field(description="Test set proportion (0.0-1.0)")] = 0.2,
     train_path: Annotated[Optional[str], Field(description="Path to save train set")] = None,
     test_path: Annotated[Optional[str], Field(description="Path to save test set")] = None,
     random_seed: Annotated[int, Field(description="Random seed for reproducibility")] = 42,
 ) -> dict:
-    """Split data into train and test sets."""
-    logger.info(f"[MCP:data_processing] train_test_split: test_size={test_size}")
+    """Split dataset into train and test sets with stratified sampling.
+
+    Split data into train and test sets."""
     try:
         # Validate test_size
         if not 0 < test_size < 1:
@@ -354,10 +364,10 @@ async def train_test_split(
 
         if train_path:
             train_df.write_csv(Path(train_path))
-            logger.info(f"[MCP:data_processing] Saved train set to {train_path}")
+            await ctx.info(f"Saved train set to {train_path}")
         if test_path:
             test_df.write_csv(Path(test_path))
-            logger.info(f"[MCP:data_processing] Saved test set to {test_path}")
+            await ctx.info(f"Saved test set to {test_path}")
 
         return {
             "success": True,
@@ -372,4 +382,4 @@ async def train_test_split(
 
 
 if __name__ == "__main__":
-    mcp.run(transport="stdio")
+    mcp.run(transport="stdio", show_banner=False)

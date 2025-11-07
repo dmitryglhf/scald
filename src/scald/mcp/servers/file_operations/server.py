@@ -2,13 +2,10 @@ import shutil
 from pathlib import Path
 from typing import Annotated
 
-from mcp.server.fastmcp import FastMCP
+from fastmcp import Context, FastMCP
 from pydantic import Field
 
-from scald.common.logger import get_logger
 from scald.common.workspace import ACTOR_WORKSPACE
-
-logger = get_logger(enable_file=False)
 
 DESCRIPTION = """
 File operations MCP server for CSV workflow management.
@@ -77,20 +74,18 @@ def is_path_allowed(path: str | Path) -> tuple[bool, str]:
         return False, f"Invalid path: {e}"
 
 
-@mcp.tool(
-    description="List files in directory with optional glob pattern. Returns file paths, sizes, and modification times."
-)
+@mcp.tool
 async def list_files(
     directory: Annotated[str, Field(description="Directory path to list")],
+    ctx: Context,
     pattern: Annotated[
         str, Field(description="Glob pattern (e.g., '*.csv', 'train*.csv')")
     ] = "*.csv",
     recursive: Annotated[bool, Field(description="Search recursively in subdirectories")] = False,
 ) -> dict:
-    """List files in directory matching pattern."""
-    logger.info(
-        f"[MCP:file_operations] list_files: {directory}, pattern={pattern}, recursive={recursive}"
-    )
+    """List files in directory with optional glob pattern. Returns file paths, sizes, and modification times.
+
+    List files in directory matching pattern."""
 
     try:
         # Security check
@@ -126,7 +121,7 @@ async def list_files(
                     }
                 )
 
-        logger.info(f"[MCP:file_operations] Found {len(file_info)} files")
+        await ctx.info(f"Found {len(file_info)} files")
         return {
             "success": True,
             "directory": str(dir_path),
@@ -136,19 +131,19 @@ async def list_files(
         }
 
     except Exception as e:
-        logger.error(f"[MCP:file_operations] Failed to list files: {e}")
+        await ctx.error(f"Failed to list files: {e}")
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(
-    description="Copy file from source to destination. Creates destination directory if needed."
-)
+@mcp.tool
 async def copy_file(
     source: Annotated[str, Field(description="Source file path")],
     destination: Annotated[str, Field(description="Destination file path")],
+    ctx: Context,
 ) -> dict:
-    """Copy file to new location."""
-    logger.info(f"[MCP:file_operations] copy_file: {source} -> {destination}")
+    """Copy file from source to destination. Creates destination directory if needed.
+
+    Copy file to new location."""
 
     try:
         # Security checks
@@ -177,7 +172,7 @@ async def copy_file(
         shutil.copy2(src_path, dst_path)
 
         dst_stat = dst_path.stat()
-        logger.info(f"[MCP:file_operations] Copied {src_path.name} ({dst_stat.st_size} bytes)")
+        await ctx.info(f"Copied {src_path.name} ({dst_stat.st_size} bytes)")
         return {
             "success": True,
             "source": str(src_path),
@@ -187,19 +182,19 @@ async def copy_file(
         }
 
     except Exception as e:
-        logger.error(f"[MCP:file_operations] Failed to copy file: {e}")
+        await ctx.error(f"Failed to copy file: {e}")
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(
-    description="Move file from source to destination. Creates destination directory if needed."
-)
+@mcp.tool
 async def move_file(
     source: Annotated[str, Field(description="Source file path")],
     destination: Annotated[str, Field(description="Destination file path")],
+    ctx: Context,
 ) -> dict:
-    """Move file to new location."""
-    logger.info(f"[MCP:file_operations] move_file: {source} -> {destination}")
+    """Move file from source to destination. Creates destination directory if needed.
+
+    Move file to new location."""
 
     try:
         # Security checks
@@ -230,7 +225,7 @@ async def move_file(
         # Move file
         shutil.move(str(src_path), str(dst_path))
 
-        logger.info(f"[MCP:file_operations] Moved {src_path.name} ({size_bytes} bytes)")
+        await ctx.info(f"Moved {src_path.name} ({size_bytes} bytes)")
         return {
             "success": True,
             "source": str(src_path),
@@ -240,16 +235,18 @@ async def move_file(
         }
 
     except Exception as e:
-        logger.error(f"[MCP:file_operations] Failed to move file: {e}")
+        await ctx.error(f"Failed to move file: {e}")
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(description="Delete file. Use with caution - this operation cannot be undone.")
+@mcp.tool
 async def delete_file(
     file_path: Annotated[str, Field(description="Path to file to delete")],
+    ctx: Context,
 ) -> dict:
-    """Delete file."""
-    logger.info(f"[MCP:file_operations] delete_file: {file_path}")
+    """Delete file. Use with caution - this operation cannot be undone.
+
+    Delete file."""
 
     try:
         # Security check
@@ -273,7 +270,7 @@ async def delete_file(
         # Delete file
         path.unlink()
 
-        logger.info(f"[MCP:file_operations] Deleted {name} ({size_bytes} bytes)")
+        await ctx.info(f"Deleted {name} ({size_bytes} bytes)")
         return {
             "success": True,
             "deleted_file": str(path),
@@ -282,16 +279,18 @@ async def delete_file(
         }
 
     except Exception as e:
-        logger.error(f"[MCP:file_operations] Failed to delete file: {e}")
+        await ctx.error(f"Failed to delete file: {e}")
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(description="Check if file or directory exists at given path.")
+@mcp.tool
 async def file_exists(
     path: Annotated[str, Field(description="Path to check")],
+    ctx: Context,
 ) -> dict:
-    """Check if file or directory exists."""
-    logger.info(f"[MCP:file_operations] file_exists: {path}")
+    """Check if file or directory exists at given path.
+
+    Check if file or directory exists."""
 
     try:
         # Security check
@@ -315,16 +314,18 @@ async def file_exists(
         return info
 
     except Exception as e:
-        logger.error(f"[MCP:file_operations] Failed to check file existence: {e}")
+        await ctx.error(f"Failed to check file existence: {e}")
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(description="Get detailed file metadata: size, modification time, permissions.")
+@mcp.tool
 async def get_file_info(
     file_path: Annotated[str, Field(description="Path to file")],
+    ctx: Context,
 ) -> dict:
-    """Get file metadata."""
-    logger.info(f"[MCP:file_operations] get_file_info: {file_path}")
+    """Get detailed file metadata: size, modification time, permissions.
+
+    Get file metadata."""
 
     try:
         # Security check
@@ -356,19 +357,22 @@ async def get_file_info(
         # Add parent directory info
         info["parent_directory"] = str(path.parent)
 
-        logger.info(f"[MCP:file_operations] Got info for {path.name}")
+        await ctx.info(f"Got info for {path.name}")
         return info
 
     except Exception as e:
-        logger.error(f"[MCP:file_operations] Failed to get file info: {e}")
+        await ctx.error(f"Failed to get file info: {e}")
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(description="Create directory. Creates parent directories if needed.")
+@mcp.tool
 async def create_directory(
     directory: Annotated[str, Field(description="Directory path to create")],
+    ctx: Context,
 ) -> dict:
-    """Create directory."""
+    """Create directory. Creates parent directories if needed.
+
+    Create directory."""
     try:
         # Security check
         is_allowed, result = is_path_allowed(directory)
@@ -380,7 +384,7 @@ async def create_directory(
         # Create directory
         dir_path.mkdir(parents=True, exist_ok=True)
 
-        logger.info(f"[MCP:file_operations] Created directory {dir_path}")
+        await ctx.info(f"Created directory {dir_path}")
         return {
             "success": True,
             "directory": str(dir_path),
@@ -388,9 +392,9 @@ async def create_directory(
         }
 
     except Exception as e:
-        logger.error(f"[MCP:file_operations] Failed to create directory: {e}")
+        await ctx.error(f"Failed to create directory: {e}")
         return {"success": False, "error": str(e)}
 
 
 if __name__ == "__main__":
-    mcp.run(transport="stdio")
+    mcp.run(transport="stdio", show_banner=False)

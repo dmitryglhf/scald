@@ -6,15 +6,11 @@ import numpy as np
 import optuna
 import polars as pl
 from catboost import CatBoostClassifier, CatBoostRegressor
+from fastmcp import Context, FastMCP
 from lightgbm import LGBMClassifier, LGBMRegressor  # type: ignore
-from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, r2_score, roc_auc_score
 from xgboost import XGBClassifier, XGBRegressor  # type: ignore
-
-from scald.common.logger import get_logger
-
-logger = get_logger(enable_file=False)
 
 DESCRIPTION = """
 Machine learning MCP server.
@@ -54,13 +50,12 @@ def _calculate_metrics(y_true: np.ndarray, y_pred: np.ndarray, task_type: str) -
     return metrics
 
 
-@mcp.tool(
-    description="Train CatBoost model and generate predictions. Returns test_metrics and predictions_path."
-)
+@mcp.tool
 async def train_catboost(
     train_path: Annotated[str, Field(description="Path to train CSV file")],
     target_column: Annotated[str, Field(description="Name of the target column in CSV")],
     task_type: Annotated[str, Field(description="Either 'classification' or 'regression'")],
+    ctx: Context,
     test_path: Annotated[
         Optional[str], Field(description="Path to test CSV file (required for predictions)")
     ] = None,
@@ -72,8 +67,7 @@ async def train_catboost(
     iterations: Annotated[int, Field(description="Number of boosting iterations")] = 100,
     learning_rate: Annotated[float, Field(description="Learning rate (0.0-1.0)")] = 0.1,
 ) -> dict:
-    """Train CatBoost model."""
-    logger.info(f"[MCP:machine_learning] train_catboost: {task_type}")
+    """Train CatBoost model and generate predictions. Returns test_metrics and predictions_path."""
     try:
         # Validate inputs
         if predictions_path and not test_path:
@@ -122,7 +116,7 @@ async def train_catboost(
                 pred_df = pl.DataFrame({"prediction": test_pred})
                 pred_df.write_csv(Path(predictions_path))
                 result["predictions_path"] = predictions_path
-                logger.info(f"[MCP:machine_learning] Saved predictions to {predictions_path}")
+                await ctx.info(f"Saved predictions to {predictions_path}")
 
         if model_path:
             model.save_model(model_path)
@@ -134,13 +128,12 @@ async def train_catboost(
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(
-    description="Train LightGBM model and generate predictions. Returns test_metrics and predictions_path."
-)
+@mcp.tool
 async def train_lightgbm(
     train_path: Annotated[str, Field(description="Path to train CSV file")],
     target_column: Annotated[str, Field(description="Name of the target column in CSV")],
     task_type: Annotated[str, Field(description="Either 'classification' or 'regression'")],
+    ctx: Context,
     test_path: Annotated[
         Optional[str], Field(description="Path to test CSV file (required for predictions)")
     ] = None,
@@ -152,8 +145,7 @@ async def train_lightgbm(
     num_iterations: Annotated[int, Field(description="Number of boosting iterations")] = 100,
     learning_rate: Annotated[float, Field(description="Learning rate (0.0-1.0)")] = 0.1,
 ) -> dict:
-    """Train LightGBM model."""
-    logger.info(f"[MCP:machine_learning] train_lightgbm: {task_type}")
+    """Train LightGBM model and generate predictions. Returns test_metrics and predictions_path."""
     try:
         # Validate inputs
         if predictions_path and not test_path:
@@ -207,7 +199,7 @@ async def train_lightgbm(
                 pred_df = pl.DataFrame({"prediction": test_pred})
                 pred_df.write_csv(Path(predictions_path))
                 result["predictions_path"] = predictions_path
-                logger.info(f"[MCP:machine_learning] Saved predictions to {predictions_path}")
+                await ctx.info(f"Saved predictions to {predictions_path}")
 
         if model_path:
             with open(model_path, "wb") as f:
@@ -220,13 +212,12 @@ async def train_lightgbm(
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(
-    description="Train XGBoost model and generate predictions. Returns test_metrics and predictions_path."
-)
+@mcp.tool
 async def train_xgboost(
     train_path: Annotated[str, Field(description="Path to train CSV file")],
     target_column: Annotated[str, Field(description="Name of the target column in CSV")],
     task_type: Annotated[str, Field(description="Either 'classification' or 'regression'")],
+    ctx: Context,
     test_path: Annotated[
         Optional[str], Field(description="Path to test CSV file (required for predictions)")
     ] = None,
@@ -238,8 +229,7 @@ async def train_xgboost(
     n_estimators: Annotated[int, Field(description="Number of boosting estimators")] = 100,
     learning_rate: Annotated[float, Field(description="Learning rate (0.0-1.0)")] = 0.1,
 ) -> dict:
-    """Train XGBoost model."""
-    logger.info(f"[MCP:machine_learning] train_xgboost: {task_type}")
+    """Train XGBoost model and generate predictions. Returns test_metrics and predictions_path."""
     try:
         # Validate inputs
         if predictions_path and not test_path:
@@ -291,7 +281,7 @@ async def train_xgboost(
                 pred_df = pl.DataFrame({"prediction": test_pred})
                 pred_df.write_csv(Path(predictions_path))
                 result["predictions_path"] = predictions_path
-                logger.info(f"[MCP:machine_learning] Saved predictions to {predictions_path}")
+                await ctx.info(f"Saved predictions to {predictions_path}")
 
         if model_path:
             with open(model_path, "wb") as f:
@@ -304,18 +294,21 @@ async def train_xgboost(
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(description="Ensemble predictions using Optuna for weight optimization.")
+@mcp.tool
 async def ensemble_predictions(
     predictions_paths: Annotated[list[str], Field(description="Paths to prediction CSVs")],
     true_labels_path: Annotated[str, Field(description="Path to true labels CSV")],
     target_column: Annotated[str, Field(description="Target column name")],
     task_type: Annotated[str, Field(description="'classification' or 'regression'")],
+    ctx: Context,
     output_path: Annotated[
         Optional[str], Field(description="Path to save ensemble predictions")
     ] = None,
     n_trials: Annotated[int, Field(description="Optuna trials")] = 100,
 ) -> dict:
-    """Ensemble multiple predictions with Optuna-optimized weights."""
+    """Ensemble predictions using Optuna for weight optimization.
+
+    Ensemble multiple predictions with Optuna-optimized weights."""
     try:
         predictions_list = []
         for pred_path in predictions_paths:
@@ -371,4 +364,4 @@ async def ensemble_predictions(
 
 
 if __name__ == "__main__":
-    mcp.run(transport="stdio")
+    mcp.run(transport="stdio", show_banner=False)

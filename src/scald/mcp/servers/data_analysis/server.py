@@ -2,12 +2,8 @@ from pathlib import Path
 from typing import Annotated, Any
 
 import polars as pl
-from mcp.server.fastmcp import FastMCP
+from fastmcp import Context, FastMCP
 from pydantic import Field
-
-from scald.common.logger import get_logger
-
-logger = get_logger(enable_file=False)
 
 DESCRIPTION = """
 Exploratory Data Analysis MCP server.
@@ -28,14 +24,12 @@ Features:
 mcp = FastMCP("data-analysis", instructions=DESCRIPTION)
 
 
-@mcp.tool(
-    description="Analyze distribution statistics for all features (numerical and categorical)."
-)
+@mcp.tool
 async def get_feature_distributions(
     file_path: Annotated[str, Field(description="Path to CSV file")],
+    ctx: Context,
 ) -> dict:
     """Get distribution statistics for all features."""
-    logger.info(f"[MCP:data_analysis] get_feature_distributions: {file_path}")
     try:
         df = pl.read_csv(Path(file_path))
 
@@ -70,21 +64,21 @@ async def get_feature_distributions(
                     "top_values": value_counts,
                 }
 
-        logger.info(f"[MCP:data_analysis] Analyzed {len(distributions)} features")
+        await ctx.info(f"Analyzed {len(distributions)} features")
         return {"success": True, "distributions": distributions}
 
     except Exception as e:
-        logger.error(f"[MCP:data_analysis] Failed to get feature distributions: {e}")
+        await ctx.error(f"Failed to get feature distributions: {e}")
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(description="Calculate correlation matrix for numerical features using Pearson method.")
+@mcp.tool
 async def get_correlations(
     file_path: Annotated[str, Field(description="Path to CSV file")],
+    ctx: Context,
     method: Annotated[str, Field(description="Correlation method (pearson)")] = "pearson",
 ) -> dict:
     """Calculate correlation matrix."""
-    logger.info(f"[MCP:data_analysis] get_correlations: {file_path}")
     try:
         df = pl.read_csv(Path(file_path))
 
@@ -109,29 +103,23 @@ async def get_correlations(
                     corr = numeric_df.select(pl.corr(col1, col2)).item()
                     corr_matrix[col1][col2] = float(corr) if corr is not None else None
 
-        logger.info(
-            f"[MCP:data_analysis] Computed correlation matrix for {len(numeric_cols)} columns"
-        )
+        await ctx.info(f"Computed correlation matrix for {len(numeric_cols)} columns")
         return {"success": True, "correlations": corr_matrix, "columns": numeric_cols}
 
     except Exception as e:
-        logger.error(f"[MCP:data_analysis] Failed to get correlations: {e}")
+        await ctx.error(f"Failed to get correlations: {e}")
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(
-    description="Detect outliers in numerical columns using IQR (Interquartile Range) method."
-)
+@mcp.tool
 async def detect_outliers(
     file_path: Annotated[str, Field(description="Path to CSV file")],
+    ctx: Context,
     iqr_multiplier: Annotated[
         float, Field(description="IQR multiplier for outlier detection (typically 1.5)")
     ] = 1.5,
 ) -> dict:
     """Detect outliers in numerical columns."""
-    logger.info(
-        f"[MCP:data_analysis] detect_outliers: {file_path}, iqr_multiplier={iqr_multiplier}"
-    )
     try:
         df = pl.read_csv(Path(file_path))
 
@@ -166,27 +154,23 @@ async def detect_outliers(
                 "upper_bound": float(upper_bound),
             }
 
-        logger.info(
-            f"[MCP:data_analysis] Found {total_outliers} outliers across {len(numeric_cols)} columns"
-        )
+        await ctx.info(f"Found {total_outliers} outliers across {len(numeric_cols)} columns")
         return {"success": True, "outliers": outliers}
 
     except Exception as e:
-        logger.error(f"[MCP:data_analysis] Failed to detect outliers: {e}")
+        await ctx.error(f"Failed to detect outliers: {e}")
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(
-    description="Automatically identify categorical, numerical, and binary features in dataset."
-)
+@mcp.tool
 async def identify_feature_types(
     file_path: Annotated[str, Field(description="Path to CSV file")],
+    ctx: Context,
     categorical_threshold: Annotated[
         int, Field(description="Max unique values to treat as categorical (must be > 0)")
     ] = 20,
 ) -> dict:
     """Identify feature types automatically."""
-    logger.info(f"[MCP:data_analysis] identify_feature_types: {file_path}")
     try:
         if categorical_threshold <= 0:
             return {
@@ -213,8 +197,8 @@ async def identify_feature_types(
             else:
                 categorical.append(col)
 
-        logger.info(
-            f"[MCP:data_analysis] Identified {len(categorical)} categorical, {len(numerical)} numerical, {len(binary)} binary features"
+        await ctx.info(
+            f"Identified {len(categorical)} categorical, {len(numerical)} numerical, {len(binary)} binary features"
         )
         return {
             "success": True,
@@ -224,16 +208,16 @@ async def identify_feature_types(
         }
 
     except Exception as e:
-        logger.error(f"[MCP:data_analysis] Failed to identify feature types: {e}")
+        await ctx.error(f"Failed to identify feature types: {e}")
         return {"success": False, "error": str(e)}
 
 
-@mcp.tool(description="Check data quality issues (missing values, duplicates, constant columns).")
+@mcp.tool
 async def check_data_quality(
     file_path: Annotated[str, Field(description="Path to CSV file")],
+    ctx: Context,
 ) -> dict:
     """Check for data quality issues."""
-    logger.info(f"[MCP:data_analysis] check_data_quality: {file_path}")
     try:
         df = pl.read_csv(Path(file_path))
 
@@ -265,13 +249,13 @@ async def check_data_quality(
         }
 
         issues_count = len(missing_data) + len(constant_columns) + (1 if duplicate_rows > 0 else 0)
-        logger.info(f"[MCP:data_analysis] Quality check: {issues_count} issues found")
+        await ctx.info(f"Quality check: {issues_count} issues found")
         return {"success": True, "quality": quality_report}
 
     except Exception as e:
-        logger.error(f"[MCP:data_analysis] Failed to check data quality: {e}")
+        await ctx.error(f"Failed to check data quality: {e}")
         return {"success": False, "error": str(e)}
 
 
 if __name__ == "__main__":
-    mcp.run(transport="stdio")
+    mcp.run(transport="stdio", show_banner=False)
