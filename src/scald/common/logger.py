@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import sys
 from datetime import datetime
@@ -12,7 +14,7 @@ _initialized = False
 
 
 def setup_logging(
-    base_log_dir: Path = Path("scald_logs"),
+    base_log_dir: Path = Path("automas_logs"),
     session_name: Optional[str] = None,
     log_level: str = "INFO",
     enable_console: bool = True,
@@ -24,28 +26,33 @@ def setup_logging(
     if _initialized and not force_reinit:
         return
 
-    if enable_file:
-        if session_name is None:
-            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            session_name = f"session_{timestamp}"
+    # Create session directory
+    if session_name is None:
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        session_name = f"session_{timestamp}"
 
-        _session_dir = base_log_dir / session_name
-        _session_dir.mkdir(parents=True, exist_ok=True)
+    _session_dir = base_log_dir / session_name
+    _session_dir.mkdir(parents=True, exist_ok=True)
 
+    # Configure loguru
     logger.remove()  # Remove default handler
+
+    # Configure custom colors for log levels
+    logger.level("INFO", color="<fg 92,120,226>")  # #5c78e2
+    logger.level("DEBUG", color="<fg 102,159,89>")  # #669f59
 
     if enable_console:
         logger.add(
             sys.stderr,
-            format="<dim>{time:YYYY-MM-DD HH:mm:ss}</dim> | <level>{level: <8}</level> | <blue>{name}</blue>:<cyan>{function}</cyan>:<magenta>{line}</magenta> - {message}",
+            format="<fg 141,182,212>[{time:MM/DD/YY HH:mm:ss}]</fg 141,182,212> <level>{level: <8}</level> <cyan>{name}:{line}</cyan> {message}",
             level=log_level,
             colorize=True,
         )
 
     if enable_file:
         logger.add(
-            _session_dir / "scald.log",  # type: ignore
-            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
+            _session_dir / "automas.log",
+            format="[{time:MM/DD/YY HH:mm:ss}] {level: <8} {name}:{line} {message}",
             level=log_level,
             rotation="10 MB",
             retention=5,
@@ -57,29 +64,36 @@ def setup_logging(
 
 
 def reset_logging() -> None:
+    """Reset logging state to allow reconfiguration with new session directory."""
     global _session_dir, _initialized
 
-    logger.remove()
+    logger.remove()  # Remove all handlers
     _session_dir = None
     _initialized = False
 
 
-def get_logger(enable_file: bool = True) -> Any:
+def get_logger(name: Optional[str] = None) -> Any:
+    """Get loguru logger. Name parameter kept for API compatibility."""
     if not _initialized:
-        setup_logging(enable_file=enable_file)
+        setup_logging()
     return logger
 
 
 def get_session_dir() -> Path:
+    """Get current session directory."""
+    if _session_dir is None:
+        setup_logging()
     assert _session_dir is not None
     return _session_dir
 
 
 def get_artifact_path(filename: str) -> Path:
+    """Get path for saving artifacts in session directory."""
     return get_session_dir() / filename
 
 
 def save_json(data: Any, filename: str) -> Path:
+    """Save data as JSON in session directory."""
     if not filename.endswith(".json"):
         filename += ".json"
 
@@ -97,6 +111,7 @@ def save_json(data: Any, filename: str) -> Path:
 
 
 def save_text(content: str, filename: str) -> Path:
+    """Save text content in session directory."""
     filepath = get_artifact_path(filename)
 
     try:
