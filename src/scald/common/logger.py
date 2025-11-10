@@ -14,7 +14,7 @@ _initialized = False
 
 
 def setup_logging(
-    base_log_dir: Path = Path("automas_logs"),
+    base_log_dir: Path = Path("scald_logs"),
     session_name: Optional[str] = None,
     log_level: str = "INFO",
     enable_console: bool = True,
@@ -51,7 +51,7 @@ def setup_logging(
 
     if enable_file:
         logger.add(
-            _session_dir / "automas.log",
+            _session_dir / "scald.log",
             format="[{time:MM/DD/YY HH:mm:ss}] {level: <8} {name}:{line} {message}",
             level=log_level,
             rotation="10 MB",

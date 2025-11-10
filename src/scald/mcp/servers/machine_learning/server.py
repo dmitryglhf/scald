@@ -105,11 +105,21 @@ async def train_catboost(
 
         if test_path:
             test_df = pl.read_csv(Path(test_path))
-            X_test = test_df.drop(target_column).to_numpy()
-            y_test = test_df[target_column].to_numpy()
-            test_pred = model.predict(X_test)
-            test_metrics = _calculate_metrics(y_test, test_pred, task_type)
-            result["test_metrics"] = test_metrics
+
+            # Check if target column exists in test data
+            has_target = target_column in test_df.columns
+
+            if has_target:
+                # Test set has labels (validation mode)
+                X_test = test_df.drop(target_column).to_numpy()
+                y_test = test_df[target_column].to_numpy()
+                test_pred = model.predict(X_test)
+                test_metrics = _calculate_metrics(y_test, test_pred, task_type)
+                result["test_metrics"] = test_metrics
+            else:
+                # Test set has no labels (production mode)
+                X_test = test_df.to_numpy()
+                test_pred = model.predict(X_test)
 
             # Save predictions if path provided
             if predictions_path:
@@ -188,11 +198,21 @@ async def train_lightgbm(
 
         if test_path:
             test_df = pl.read_csv(Path(test_path))
-            X_test = test_df.drop(target_column).to_numpy()
-            y_test = test_df[target_column].to_numpy()
-            test_pred = model.predict(X_test)
-            test_metrics = _calculate_metrics(y_test, test_pred, task_type)
-            result["test_metrics"] = test_metrics
+
+            # Check if target column exists in test data
+            has_target = target_column in test_df.columns
+
+            if has_target:
+                # Test set has labels (validation mode)
+                X_test = test_df.drop(target_column).to_numpy()
+                y_test = test_df[target_column].to_numpy()
+                test_pred = model.predict(X_test)
+                test_metrics = _calculate_metrics(y_test, test_pred, task_type)
+                result["test_metrics"] = test_metrics
+            else:
+                # Test set has no labels (production mode)
+                X_test = test_df.to_numpy()
+                test_pred = model.predict(X_test)
 
             # Save predictions if path provided
             if predictions_path:
@@ -270,11 +290,21 @@ async def train_xgboost(
 
         if test_path:
             test_df = pl.read_csv(Path(test_path))
-            X_test = test_df.drop(target_column).to_numpy()
-            y_test = test_df[target_column].to_numpy()
-            test_pred = model.predict(X_test)
-            test_metrics = _calculate_metrics(y_test, test_pred, task_type)
-            result["test_metrics"] = test_metrics
+
+            # Check if target column exists in test data
+            has_target = target_column in test_df.columns
+
+            if has_target:
+                # Test set has labels (validation mode)
+                X_test = test_df.drop(target_column).to_numpy()
+                y_test = test_df[target_column].to_numpy()
+                test_pred = model.predict(X_test)
+                test_metrics = _calculate_metrics(y_test, test_pred, task_type)
+                result["test_metrics"] = test_metrics
+            else:
+                # Test set has no labels (production mode)
+                X_test = test_df.to_numpy()
+                test_pred = model.predict(X_test)
 
             # Save predictions if path provided
             if predictions_path:
