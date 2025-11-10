@@ -2,8 +2,9 @@ from pathlib import Path
 from typing import Literal
 
 import numpy as np
+import polars as pl
 
-from scald.agents.actor import Actor, ActorSolution
+from scald.agents.actor import Actor
 from scald.agents.critic import Critic
 from scald.common.logger import get_logger
 from scald.common.workspace import (
@@ -79,25 +80,39 @@ class Scald:
 
                 if critic_evaluation.score == 1:
                     logger.info(f"Solution accepted on iteration {iteration}")
-                    save_workspace_artifacts(actor_solution)
-                    return self._extract_predictions(actor_solution)
+                    saved_pred_path = save_workspace_artifacts(actor_solution)
+                    return self._extract_predictions(saved_pred_path)
 
                 feedback = critic_evaluation.feedback
 
             logger.warning(
                 f"Max iterations ({self.max_iterations}) reached without acceptance, returning last solution"
             )
-            save_workspace_artifacts(actor_solution)
-            return self._extract_predictions(actor_solution)
+            saved_pred_path = save_workspace_artifacts(actor_solution)
+            return self._extract_predictions(saved_pred_path)
 
         finally:
             cleanup_workspace()
 
-    def _extract_predictions(self, solution: ActorSolution) -> np.ndarray:
-        """Extract predictions as numpy array"""
+    def _extract_predictions(self, saved_pred_path: Path | None) -> np.ndarray:
+        """Extract predictions as numpy array from saved CSV file"""
         try:
-            predictions_array = np.array(solution.predictions)
-            logger.info(f"Extracted {len(predictions_array)} predictions from ActorSolution")
-            return predictions_array
+            if saved_pred_path and saved_pred_path.exists():
+                logger.info(f"Reading predictions from saved CSV: {saved_pred_path}")
+                pred_df = pl.read_csv(saved_pred_path)
+
+                if "prediction" in pred_df.columns:
+                    predictions_array = pred_df["prediction"].to_numpy()
+                else:
+                    predictions_array = pred_df[:, 0].to_numpy()
+
+                logger.info(f"Extracted {len(predictions_array)} predictions from CSV file")
+                return predictions_array
+
+            raise ValueError(
+                "predictions_path not available in saved artifacts. "
+                "Actor must return valid predictions_path."
+            )
+
         except Exception as e:
-            raise ValueError("No predictions available in ActorSolution") from e
+            raise ValueError(f"Failed to extract predictions: {e}") from e

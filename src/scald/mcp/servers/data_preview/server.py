@@ -10,7 +10,6 @@ Data preview MCP server for quick CSV file inspection.
 
 Available tools:
 - Get CSV metadata (shape, columns, dtypes, missing values, memory usage)
-- Preview first N rows of CSV file
 
 Use cases:
 - Quick data exploration before processing

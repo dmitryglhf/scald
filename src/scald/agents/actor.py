@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Optional, Type
+from typing import TYPE_CHECKING, Literal, Optional, Type
 
 from pydantic import BaseModel, Field
 from toon import encode
@@ -15,9 +15,8 @@ TaskType = Literal["classification", "regression"]
 class ActorSolution(BaseModel):
     """Solution from Actor."""
 
-    predictions_path: Optional[Path] = Field(default=None, description="Path to predictions CSV")
-    predictions: list[Any] = Field(
-        default_factory=list, description="List of predictions on test set"
+    predictions_path: Path = Field(
+        description="Absolute path to predictions CSV file (e.g., /home/user/.scald/actor/output/predictions.csv)"
     )
     report: str = Field(
         default="",
@@ -43,10 +42,8 @@ WORKFLOW:
 2. Preprocess if needed: handle_missing_values, encode_categorical_label
 3. Train model: train_catboost/lightgbm/xgboost (always use predictions_path="/output/predictions.csv")
 4. If you encoded target: decode predictions using decode_categorical_label with saved mapping
-5. Read ALL predictions from CSV file (NOT preview - read the entire file with all rows)
-6. Return ActorSolution with:
-   - predictions_path: "/output/predictions.csv"
-   - predictions: COMPLETE list of ALL prediction values (must match test set size)
+5. Return ActorSolution with:
+   - predictions_path: absolute path "/home/<user>/.scald/actor/output/predictions.csv"
    - report: detailed markdown report
 
 CRITICAL - Categorical Encoding:
@@ -58,11 +55,9 @@ If you encode target column, you MUST decode predictions before returning:
 - Return decoded values (original labels, not integers)
 
 OUTPUT REQUIREMENTS:
-- predictions_path: absolute path (e.g., ~/.scald/actor/output/predictions.csv)
-- predictions: COMPLETE list of ALL prediction values from CSV (read entire file, not just preview)
-  * Use file_operations tools to read the FULL predictions CSV
-  * Extract ALL values from the "prediction" column
-  * Length MUST equal test set size
+- predictions_path: REQUIRED absolute path to predictions CSV (e.g., /home/user/.scald/actor/output/predictions.csv)
+  * This file is created by the machine learning tools
+  * Return the FULL absolute path as seen in tool outputs
 - report: detailed markdown report covering data analysis, preprocessing, model, and results
 """
 

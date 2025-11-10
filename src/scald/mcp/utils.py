@@ -165,7 +165,6 @@ def validate_server_config(name: str, config: MCPServerConfig) -> None:
 
 def create_mcp_server_stdio(name: str, config: MCPServerConfig) -> MCPServerStdio:
     """Create MCPServerStdio instance from config."""
-    logger.info(f"Creating MCP server: {name}")
     return MCPServerStdio(
         config.command,
         args=list(config.args),

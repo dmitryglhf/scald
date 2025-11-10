@@ -7,11 +7,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
-import numpy as np
 import openml
 import pandas as pd
 import yaml
-from sklearn.metrics import accuracy_score, f1_score, log_loss, roc_auc_score
+from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
@@ -35,7 +34,6 @@ class BenchmarkResult:
     # Performance metrics
     accuracy: float
     f1_score: float
-    log_loss: float | None
     roc_auc: float | None
 
     # Iterations info
@@ -151,7 +149,6 @@ class AutoMLBenchmark:
 
             logger.info(f"Saved datasets to {task_dir}")
 
-            # Run SCALD
             scald = Scald(max_iterations=self.max_iterations)
 
             y_pred = await scald.run(
@@ -161,61 +158,35 @@ class AutoMLBenchmark:
                 task_type="classification",
             )
 
-            # Save predictions
             pred_df = pd.DataFrame({"prediction": y_pred, "true_label": y_test})
             pred_df.to_csv(task_dir / "predictions.csv", index=False)
 
-            # Calculate metrics
-            accuracy = accuracy_score(y_test, y_pred)
-            f1 = f1_score(y_test, y_pred, average="weighted", zero_division=0)
+            y_test_str = y_test.astype(str)
+            y_pred_str = pd.Series(y_pred).astype(str).values
 
-            # Log Loss (convert labels to numeric if needed)
-            logloss = None
-            try:
-                # Encode labels to numeric
-                le = LabelEncoder()
-                y_test_encoded = le.fit_transform(y_test)
-                y_pred_encoded = le.transform(y_pred)
+            accuracy = accuracy_score(y_test_str, y_pred_str)
+            f1 = f1_score(y_test_str, y_pred_str, average="weighted", zero_division=0)
 
-                # For log_loss we need probabilities, but we only have hard predictions
-                # Create one-hot encoded "probabilities" (1.0 for predicted class, 0.0 for others)
-                n_classes_actual = len(le.classes_)
-                y_pred_proba = pd.get_dummies(y_pred_encoded).values
-
-                # Ensure all classes are represented
-                if y_pred_proba.shape[1] < n_classes_actual:
-                    # Pad with zeros for missing classes
-                    padding = n_classes_actual - y_pred_proba.shape[1]
-                    y_pred_proba = np.hstack(
-                        [y_pred_proba, np.zeros((y_pred_proba.shape[0], padding))]
-                    )
-
-                logloss = log_loss(y_test_encoded, y_pred_proba, labels=range(n_classes_actual))
-            except Exception as e:
-                logger.warning(f"Could not calculate log loss: {e}")
-
-            # ROC AUC (only for binary classification)
             roc_auc = None
             if n_classes == 2:
                 try:
                     le = LabelEncoder()
-                    y_test_binary = le.fit_transform(y_test)
-                    y_pred_binary = le.transform(y_pred)
+                    # Fit on both to ensure all labels are seen
+                    le.fit(list(y_test_str) + list(y_pred_str))
+                    y_test_binary = le.transform(y_test_str)
+                    y_pred_binary = le.transform(y_pred_str)
                     roc_auc = roc_auc_score(y_test_binary, y_pred_binary)
                 except Exception as e:
                     logger.warning(f"Could not calculate ROC AUC: {e}")
 
-            # Collect token usage and costs
             actor_cost = scald.actor.cost
             critic_cost = scald.critic.cost
 
-            # Calculate totals
             total_tokens = scald.actor.total_tokens + scald.critic.total_tokens
             total_cost = actor_cost.total_price + critic_cost.total_price
 
             runtime = time.time() - start_time
 
-            # Determine iterations info (simplified for now)
             iterations_run = self.max_iterations
             accepted_iteration = self.max_iterations
 
@@ -228,7 +199,6 @@ class AutoMLBenchmark:
                 n_classes=n_classes,
                 accuracy=accuracy,
                 f1_score=f1,
-                log_loss=logloss,
                 roc_auc=roc_auc,
                 iterations_run=iterations_run,
                 max_iterations=self.max_iterations,
@@ -265,8 +235,6 @@ class AutoMLBenchmark:
                 f.write("Performance:\n")
                 f.write(f"  Accuracy:  {accuracy:.4f}\n")
                 f.write(f"  F1-Score:  {f1:.4f}\n")
-                if logloss is not None:
-                    f.write(f"  Log Loss:  {logloss:.4f}\n")
                 if roc_auc:
                     f.write(f"  ROC AUC:   {roc_auc:.4f}\n")
                 f.write("\nTokens:\n")
@@ -289,7 +257,6 @@ class AutoMLBenchmark:
 
             logger.info(
                 f"✓ {task_name}: Acc={accuracy:.4f}, F1={f1:.4f}, "
-                f"LogLoss={logloss:.4f if logloss else 'N/A'}, "
                 f"Cost=${total_cost:.4f}, Time={runtime:.1f}s"
             )
 
@@ -316,7 +283,6 @@ class AutoMLBenchmark:
                 n_classes=0,
                 accuracy=0.0,
                 f1_score=0.0,
-                log_loss=None,
                 roc_auc=None,
                 iterations_run=0,
                 max_iterations=self.max_iterations,
@@ -395,14 +361,6 @@ class AutoMLBenchmark:
                 f.write(
                     f"Mean F1-Score:  {sum(r.f1_score for r in successful) / len(successful):.4f}\n"
                 )
-
-                # Log Loss (only for tasks where it was calculated)
-                logloss_results = [r for r in successful if r.log_loss is not None]
-                if logloss_results:
-                    f.write(
-                        f"Mean Log Loss:  {sum(r.log_loss for r in logloss_results) / len(logloss_results):.4f}\n"
-                    )
-
                 f.write(f"Min Accuracy:   {min(r.accuracy for r in successful):.4f}\n")
                 f.write(f"Max Accuracy:   {max(r.accuracy for r in successful):.4f}\n\n")
 
@@ -441,14 +399,13 @@ class AutoMLBenchmark:
                 f.write("PER-TASK RESULTS\n")
                 f.write("-" * 100 + "\n")
                 f.write(
-                    f"{'Task':<25} {'Accuracy':>10} {'F1-Score':>10} {'LogLoss':>10} {'Cost ($)':>12} {'Time (s)':>10}\n"
+                    f"{'Task':<25} {'Accuracy':>10} {'F1-Score':>10} {'Cost ($)':>12} {'Time (s)':>10}\n"
                 )
                 f.write("-" * 100 + "\n")
                 for r in successful:
-                    logloss_str = f"{r.log_loss:.4f}" if r.log_loss is not None else "N/A"
                     f.write(
                         f"{r.task_name:<25} {r.accuracy:>10.4f} {r.f1_score:>10.4f} "
-                        f"{logloss_str:>10} {r.total_cost:>12.6f} {r.runtime_seconds:>10.1f}\n"
+                        f"{r.total_cost:>12.6f} {r.runtime_seconds:>10.1f}\n"
                     )
 
             if failed:
@@ -472,12 +429,6 @@ class AutoMLBenchmark:
             print("\nPerformance:")
             print(f"  Mean Accuracy: {sum(r.accuracy for r in successful) / len(successful):.4f}")
             print(f"  Mean F1-Score: {sum(r.f1_score for r in successful) / len(successful):.4f}")
-
-            logloss_results = [r for r in successful if r.log_loss is not None]
-            if logloss_results:
-                print(
-                    f"  Mean Log Loss: {sum(r.log_loss for r in logloss_results) / len(logloss_results):.4f}"
-                )
 
             print("\nTokens:")
             print(f"  Total: {sum(r.total_tokens for r in successful):,}")
