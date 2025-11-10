@@ -197,3 +197,4 @@ cython_debug/
 
 scald_logs/
 catboost_info/
+benchmark_results

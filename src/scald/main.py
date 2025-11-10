@@ -96,6 +96,8 @@ class Scald:
     def _extract_predictions(self, solution: ActorSolution) -> np.ndarray:
         """Extract predictions as numpy array"""
         try:
-            return np.array(solution.predictions)
+            predictions_array = np.array(solution.predictions)
+            logger.info(f"Extracted {len(predictions_array)} predictions from ActorSolution")
+            return predictions_array
         except Exception as e:
             raise ValueError("No predictions available in ActorSolution") from e

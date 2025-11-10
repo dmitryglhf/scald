@@ -43,8 +43,11 @@ WORKFLOW:
 2. Preprocess if needed: handle_missing_values, encode_categorical_label
 3. Train model: train_catboost/lightgbm/xgboost (always use predictions_path="/output/predictions.csv")
 4. If you encoded target: decode predictions using decode_categorical_label with saved mapping
-5. Read predictions CSV to extract list of values
-6. Return ActorSolution with all fields filled
+5. Read ALL predictions from CSV file (NOT preview - read the entire file with all rows)
+6. Return ActorSolution with:
+   - predictions_path: "/output/predictions.csv"
+   - predictions: COMPLETE list of ALL prediction values (must match test set size)
+   - report: detailed markdown report
 
 CRITICAL - Categorical Encoding:
 If you encode target column, you MUST decode predictions before returning:
@@ -56,7 +59,10 @@ If you encode target column, you MUST decode predictions before returning:
 
 OUTPUT REQUIREMENTS:
 - predictions_path: absolute path (e.g., ~/.scald/actor/output/predictions.csv)
-- predictions: list of actual prediction values from CSV
+- predictions: COMPLETE list of ALL prediction values from CSV (read entire file, not just preview)
+  * Use file_operations tools to read the FULL predictions CSV
+  * Extract ALL values from the "prediction" column
+  * Length MUST equal test set size
 - report: detailed markdown report covering data analysis, preprocessing, model, and results
 """
 

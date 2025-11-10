@@ -12,17 +12,17 @@ uv sync --group benchmarks
 
 Run all benchmarks:
 ```bash
-uv run python examples/benchmark/run_openml_benchmark.py
+uv run python examples/benchmark/amlb.py
 ```
 
 Run specific tasks:
 ```bash
-uv run python examples/benchmark/run_openml_benchmark.py --tasks Australian credit-g
+uv run python examples/benchmark/amlb.py --tasks Australian credit-g
 ```
 
 Configure iterations:
 ```bash
-uv run python examples/benchmark/run_openml_benchmark.py --max-iterations 10
+uv run python examples/benchmark/amlb.py --max-iterations 10
 ```
 
 ## Available Tasks
@@ -43,9 +43,3 @@ uv run python examples/benchmark/run_openml_benchmark.py --max-iterations 10
 - segment (146822)
 - sylvine (168912)
 - vehicle (53)
-
-## Output
-
-Results are saved to `benchmark_results/`:
-- `benchmark_summary.csv` - overall results
-- `<task_name>/` - task-specific data and predictions

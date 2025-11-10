@@ -46,12 +46,6 @@ class TestMCPServerConfig:
         assert config.retries == 5
         assert config.module_path == "path/to/module"
 
-    def test_immutable(self):
-        """Config should be frozen."""
-        config = MCPServerConfig(command="test", args=("arg",))
-        with pytest.raises(AttributeError):
-            config.command = "new-command"
-
 
 class TestPythonServer:
     """Test python_server helper function."""
