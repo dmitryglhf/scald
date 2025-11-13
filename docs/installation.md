@@ -2,21 +2,17 @@
 
 ## Requirements
 
-- Python 3.11 or higher
-- [uv](https://github.com/astral-sh/uv) package manager
-- OpenRouter API key (or compatible LLM API)
+Python 3.11+, [uv](https://github.com/astral-sh/uv) package manager, and an OpenRouter API key (or compatible LLM provider).
 
-## Install uv
+## Setup
 
-If you don't have uv installed:
+Install uv if needed:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-## Install Scald
-
-Clone the repository and install dependencies:
+Clone and install Scald:
 
 ```bash
 git clone https://github.com/yourusername/scald.git
@@ -26,48 +22,42 @@ uv sync
 
 ## Configuration
 
-Create an environment file from the template:
+Copy the environment template and add your API credentials:
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` and add your API credentials:
+Edit `.env`:
 
 ```bash
 OPENROUTER_API_KEY=your_api_key_here
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 ```
 
-## Verify Installation
+## Verification
 
-Test that Scald is installed correctly:
+Confirm installation:
 
 ```bash
 scald --help
 ```
 
-You should see the CLI help message with available options.
+You should see the CLI help output with available commands and options.
 
-## Optional: Documentation Dependencies
+## Optional Dependencies
 
-To build and serve documentation locally:
+For documentation:
 
 ```bash
 uv sync --group docs
-mkdocs serve
+mkdocs serve  # Available at http://localhost:8000
 ```
 
-Documentation will be available at http://localhost:8000
-
-## Optional: Development Dependencies
-
-For development work (testing, linting):
+For development:
 
 ```bash
 uv sync --group dev
 ```
-
-## Next Steps
 
 Continue to [Quick Start](quickstart.md) to run your first AutoML task.

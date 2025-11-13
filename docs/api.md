@@ -1,10 +1,10 @@
 # API Reference
 
-Complete API documentation for Scald classes and methods.
+Complete reference for Scald classes and methods.
 
 ## Scald
 
-Main orchestrator class for AutoML workflows.
+Main orchestrator for AutoML workflows.
 
 ::: scald.Scald
     options:
@@ -13,7 +13,7 @@ Main orchestrator class for AutoML workflows.
       separate_signature: true
       show_signature_annotations: true
 
-## Usage Example
+## Usage
 
 ```python
 import asyncio
@@ -31,11 +31,10 @@ async def main():
     
     return predictions
 
-if __name__ == "__main__":
-    results = asyncio.run(main())
+results = asyncio.run(main())
 ```
 
-## Type Hints
+## Type Signatures
 
 ```python
 from typing import List
@@ -54,24 +53,13 @@ class Scald:
 
 ## Return Values
 
-### `run()` Returns
-
-List of predictions corresponding to test data rows:
-
-- **Classification**: List of class labels (int or str)
-- **Regression**: List of numeric predictions (float)
-
-Length matches number of rows in test dataset.
+`run()` returns predictions as a list. For classification, list contains class labels (int or str). For regression, list contains numeric predictions (float). List length matches test data row count.
 
 ## Exceptions
 
-### Common Exceptions
+Common exceptions: `FileNotFoundError` for missing data files, `ValueError` for invalid task_type or missing target column, `RuntimeError` for API or execution failures.
 
-- `FileNotFoundError`: Training or test file not found
-- `ValueError`: Invalid task_type or missing target column
-- `RuntimeError`: API errors or execution failures
-
-### Error Handling
+Error handling:
 
 ```python
 try:
@@ -81,10 +69,7 @@ except FileNotFoundError:
 except ValueError:
     print("Invalid parameters")
 except Exception as e:
-    print(f"Unexpected error: {e}")
+    print(f"Error: {e}")
 ```
 
-## See Also
-
-- [Python API Guide](usage/api.md) - Practical usage examples
-- [Configuration](usage/configuration.md) - Settings and options
+See [Python API Guide](usage/api.md) for practical examples and [Configuration](usage/configuration.md) for settings.

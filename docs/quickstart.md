@@ -1,55 +1,40 @@
 # Quick Start
 
-This guide walks through running your first AutoML task with Scald.
+## Prepare Data
 
-## Prepare Your Data
-
-Scald expects CSV files with:
-
-- Training data with features and target column
-- Test data with the same features (target optional)
-
-Example structure:
+Scald expects CSV files with training data (features + target) and test data (same features). The target column should be numeric for regression or categorical for classification.
 
 ```csv
-feature_1,feature_2,feature_3,target
-1.2,3.4,5.6,0
-2.3,4.5,6.7,1
-...
+feature_1,feature_2,target
+1.2,3.4,0
+2.3,4.5,1
 ```
 
 ## CLI Usage
 
-The simplest way to use Scald is via the command line:
+Run AutoML with a single command:
 
 ```bash
 scald --train data/train.csv \
       --test data/test.csv \
       --target price \
-      --task-type regression
+      --task-type regression \
+      --max-iterations 5
 ```
 
-### CLI Options
+Task type must be either `classification` or `regression`. Iterations control Actor-Critic refinement cycles (default: 5).
 
-- `--train`: Path to training CSV file (required)
-- `--test`: Path to test CSV file (required)
-- `--target`: Name of target column (required)
-- `--task-type`: Either `classification` or `regression` (required)
-- `--max-iterations`: Number of Actor-Critic iterations (default: 5)
+## Python API
 
-## Python API Usage
-
-For more control, use the Python API:
+For programmatic control:
 
 ```python
 import asyncio
 from scald import Scald
 
 async def main():
-    # Initialize Scald
     scald = Scald(max_iterations=5)
     
-    # Run AutoML workflow
     predictions = await scald.run(
         train_path="data/train.csv",
         test_path="data/test.csv",
@@ -57,53 +42,30 @@ async def main():
         task_type="classification"
     )
     
-    # predictions is a list of predicted values
     print(f"Generated {len(predictions)} predictions")
 
-if __name__ == "__main__":
-    asyncio.run(main())
+asyncio.run(main())
 ```
 
-## What Happens During Execution
+## Execution Flow
 
-1. **Data Preview**: Actor examines training and test data
-2. **Analysis**: Actor performs EDA, identifies patterns, missing values, outliers
-3. **Preprocessing**: Actor applies transformations (encoding, scaling, feature engineering)
-4. **Model Training**: Actor trains models (CatBoost, LightGBM, or XGBoost)
-5. **Evaluation**: Critic reviews the solution and provides feedback
-6. **Refinement**: Based on feedback, Actor improves the solution
-7. **Iteration**: Steps 2-6 repeat for max_iterations
-8. **Prediction**: Final model generates predictions on test data
+The workflow progresses through data preview, exploratory analysis, preprocessing, model training, and evaluation. The Critic reviews each iteration and provides feedback. The Actor refines the approach based on this feedback, converging on an optimal solution. Each iteration improves upon the previous attempt through targeted adjustments.
 
 ## Output
 
-Scald creates a session directory with:
-
-- `session.log`: Detailed execution logs
-- `artifacts/`: Generated code and intermediate files
-- `predictions.csv`: Final predictions
-- Cost and token usage summary
-
-## Example Output
+Scald creates a timestamped session directory containing detailed logs, generated code artifacts, and final predictions:
 
 ```
-Session: session_20250113_143022
-Iterations: 5/5
-Final Score: 0.87
-Cost: $0.42
-Predictions saved to: predictions.csv
+sessions/session_20250113_143022/
+├── session.log          # Execution logs
+├── artifacts/           # Generated code per iteration
+└── predictions.csv      # Final predictions
 ```
+
+Console output shows iteration progress, final metrics, cost, and execution time.
 
 ## Troubleshooting
 
-**API Key Issues**: Verify your `.env` file has correct credentials
+API key errors indicate missing or incorrect credentials in `.env`. Memory errors suggest insufficient RAM for the dataset size. Poor performance can be improved by increasing `max_iterations` for additional refinement cycles.
 
-**Memory Errors**: For large datasets, ensure sufficient RAM
-
-**Poor Performance**: Try increasing `max_iterations` for more refinement
-
-## Next Steps
-
-- [Architecture](architecture.md) - Understand how Scald works
-- [Actor-Critic Pattern](actor-critic.md) - Learn about the agent collaboration
-- [Configuration](usage/configuration.md) - Customize Scald behavior
+Continue to [Architecture](architecture.md) to understand how Scald works internally.

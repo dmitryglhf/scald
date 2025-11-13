@@ -1,154 +1,50 @@
 # Architecture
 
-Scald's architecture is built around collaborative agents, MCP servers, and a learning system.
+Scald orchestrates collaborative AI agents, MCP servers, and a learning system to automate machine learning workflows.
 
-## System Overview
-
-```
-┌─────────────────────────────────────────────────────┐
-│                      Scald                          │
-│  (Orchestrator)                                     │
-└──────────────┬──────────────────────────────────────┘
-               │
-      ┌────────┴────────┐
-      │                 │
-┌─────▼─────┐     ┌─────▼─────┐
-│   Actor   │────▶│   Critic  │
-│ (Solver)  │◀────│ (Reviewer)│
-└─────┬─────┘     └───────────┘
-      │
-      │ Uses
-      │
-┌─────▼──────────────────────────────────┐
-│          MCP Servers                   │
-│  • data-analysis                       │
-│  • data-preview                        │
-│  • data-processing                     │
-│  • machine-learning                    │
-│  • file-operations                     │
-│  • sequential-thinking                 │
-└────────────────────────────────────────┘
-```
+<div align="center">
+  <img src="../assets/arch.svg" alt="Scald Architecture" width="700"/>
+</div>
 
 ## Core Components
 
-### Scald (Orchestrator)
+**Scald Orchestrator** manages the Actor-Critic loop, tracking iterations, costs, and performance metrics. It handles workspace isolation, session management, and artifact preservation. Each run creates an independent session with dedicated logging and storage.
 
-The main controller that:
+**Actor Agent** is an LLM-powered data scientist that explores data, engineers features, and trains models. It has access to six MCP servers providing data operations, statistical analysis, preprocessing, model training, file management, and structured reasoning. The Actor generates executable code for each pipeline stage, storing artifacts for reproducibility.
 
-- Manages the Actor-Critic loop
-- Coordinates iterations and convergence
-- Tracks costs, tokens, and performance
-- Handles logging and artifact storage
-- Manages workspace isolation
+**Critic Agent** evaluates Actor solutions without access to MCP servers. This separation ensures objective review based on code quality and reasoning rather than direct data manipulation. The Critic provides targeted feedback, identifies issues, and decides whether to accept solutions or request refinement.
 
-### Actor (Data Scientist Agent)
+**Memory Manager** uses ChromaDB with Jina embeddings to store and retrieve past experiences. When facing a new task, the system queries memory for similar problems, retrieving relevant preprocessing strategies, feature engineering patterns, and algorithm choices. This enables transfer learning across datasets.
 
-An LLM-powered agent that:
-
-- Explores and analyzes data
-- Engineers features and handles preprocessing
-- Selects and trains models
-- Generates predictions
-- Uses MCP servers as tools
-
-The Actor has access to 6 specialized MCP servers that provide data operations, ML capabilities, and structured thinking.
-
-### Critic (Reviewer Agent)
-
-An LLM-powered agent that:
-
-- Evaluates Actor's solutions
-- Provides constructive feedback
-- Decides whether to accept or reject solutions
-- Suggests improvements
-- Determines convergence
-
-The Critic doesn't have access to MCP servers—it reviews based on the Actor's code and results.
-
-### Memory Manager
-
-A ChromaDB-based system that:
-
-- Stores past task experiences
-- Uses Jina embeddings for semantic search
-- Retrieves relevant examples for new tasks
-- Enables transfer learning across problems
-
-### MCP Servers
-
-Six specialized servers provide tools for:
-
-1. **data-analysis**: Statistical analysis, correlations, distributions
-2. **data-preview**: Quick data inspection and schema viewing
-3. **data-processing**: Encoding, scaling, feature engineering
-4. **machine-learning**: Model training, prediction, evaluation
-5. **file-operations**: Reading/writing data and artifacts
-6. **sequential-thinking**: Structured problem decomposition
+**MCP Servers** provide specialized capabilities: data-preview for inspection, data-analysis for statistics and correlations, data-processing for transformations, machine-learning for model training, file-operations for I/O, and sequential-thinking for complex reasoning decomposition.
 
 ## Workflow
 
-1. **Initialization**: Scald creates isolated workspace and session
-2. **Memory Retrieval**: Past relevant experiences loaded
-3. **Iteration Loop** (default 5 times):
-   - Actor analyzes data using MCP tools
-   - Actor preprocesses and trains models
-   - Actor generates code and artifacts
-   - Critic reviews solution quality
-   - Critic provides feedback for next iteration
-4. **Convergence**: Best solution selected
-5. **Prediction**: Final model applied to test data
-6. **Cleanup**: Artifacts saved, logs written, costs reported
+Initialization creates an isolated workspace and session directory. The system retrieves relevant experiences from memory based on task characteristics. The Actor-Critic loop then executes for the specified number of iterations.
+
+Within each iteration, the Actor reviews previous feedback (if any), analyzes data characteristics, designs preprocessing strategy, trains models, and submits the solution. The Critic evaluates code quality, methodology, and performance, providing specific feedback for improvement. This continues until convergence or maximum iterations.
+
+After the loop completes, the best solution is selected, applied to test data for final predictions, and all artifacts are saved with comprehensive logging and cost reports.
 
 ## Data Flow
 
-```
-train.csv ──┐
-            ├──▶ Actor ──▶ preprocessing ──▶ model ──▶ Critic
-test.csv ───┘                    │                        │
-                                 │                        │
-                            artifacts/                feedback
-                                 │                        │
-                                 └────────────────────────┘
-                                          │
-                                   predictions.csv
-```
+Training and test CSV files flow to the Actor, which applies preprocessing, trains a model, and produces artifacts. The Critic reviews these artifacts and provides feedback, which influences the next iteration. The final model generates predictions saved to CSV.
 
 ## Session Management
 
-Each run creates a timestamped session directory:
+Each execution creates a timestamped directory:
 
 ```
 sessions/session_YYYYMMDD_HHMMSS/
 ├── session.log          # Execution logs
-├── artifacts/           # Generated code
-│   ├── actor_iter_1.py
-│   ├── actor_iter_2.py
-│   └── ...
+├── artifacts/           # Code per iteration
 └── predictions.csv      # Final output
 ```
 
-## Configuration
-
-Scald behavior is controlled via:
-
-- Environment variables (`.env`)
-- Constructor parameters
-- Runtime arguments
-
-See [Configuration](usage/configuration.md) for details.
+Sessions are independent and can run concurrently without interference.
 
 ## Scalability
 
-Scald scales through:
+Workspace isolation prevents conflicts between concurrent runs. Agents operate statelessly, requiring explicit context passing. ChromaDB efficiently handles large experience databases. Built-in cost tracking monitors API usage per session, enabling budget control.
 
-- **Workspace isolation**: Each session runs in separate directory
-- **Stateless execution**: Agents don't maintain state between iterations
-- **Memory efficiency**: ChromaDB handles large experience databases
-- **Cost tracking**: Monitor API usage per session
-
-## Next Steps
-
-- [Actor-Critic Pattern](actor-critic.md) - Deep dive into agent collaboration
-- [MCP Servers](mcp-servers.md) - Learn about available tools
-- [Python API](usage/api.md) - Programmatic usage
+Continue to [Actor-Critic Pattern](actor-critic.md) for deeper understanding of agent collaboration.

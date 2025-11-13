@@ -1,193 +1,49 @@
 # Actor-Critic Pattern
 
-Scald uses a collaborative Actor-Critic pattern where two specialized agents work together to solve ML tasks.
-
-## Overview
-
-The Actor-Critic pattern divides responsibility:
-
-- **Actor**: Proposes solutions
-- **Critic**: Evaluates solutions and provides feedback
-
-Through iterative refinement, this pattern converges on high-quality solutions.
+Scald implements collaborative problem-solving through two specialized agents with complementary roles: the Actor proposes solutions while the Critic evaluates and guides refinement.
 
 ## Actor: The Solver
 
-### Responsibilities
+The Actor is an LLM-powered data scientist with access to six MCP servers. Each iteration begins by reviewing the Critic's previous feedback, then analyzing data characteristics to inform strategy. The Actor makes decisions about encoding methods, scaling approaches, feature engineering, and algorithm selection based on data properties rather than fixed rules.
 
-The Actor is a data scientist agent that:
-
-1. Analyzes training and test data
-2. Performs exploratory data analysis
-3. Identifies preprocessing needs
-4. Engineers features
-5. Selects appropriate algorithms
-6. Trains and evaluates models
-7. Generates predictions
-
-### Tools
-
-The Actor has access to all 6 MCP servers:
-
-- **data-preview**: Inspect data structure and samples
-- **data-analysis**: Compute statistics, correlations, distributions
-- **data-processing**: Apply encodings, scaling, transformations
-- **machine-learning**: Train models (CatBoost, LightGBM, XGBoost)
-- **file-operations**: Read/write data and artifacts
-- **sequential-thinking**: Break down complex reasoning
-
-### Workflow
-
-In each iteration, the Actor:
-
-1. Reviews Critic's feedback (if not first iteration)
-2. Analyzes data characteristics
-3. Decides on preprocessing strategy
-4. Applies transformations
-5. Trains model with selected algorithm
-6. Evaluates performance on validation set
-7. Generates predictions for test data
-8. Submits solution to Critic
+Using MCP servers as tools, the Actor performs exploratory analysis, applies transformations, trains gradient boosting models (CatBoost, LightGBM, or XGBoost), and generates predictions. All work produces executable code saved as artifacts, ensuring reproducibility. The Actor leverages past experiences from memory to inform decisions about preprocessing and modeling strategies.
 
 ## Critic: The Reviewer
 
-### Responsibilities
+The Critic evaluates solutions without access to MCP servers, ensuring objective review based on code quality and methodology rather than direct data manipulation. Each evaluation examines preprocessing appropriateness, algorithm suitability for the task, potential issues or edge cases, and overall solution quality.
 
-The Critic evaluates solutions and:
+The Critic provides specific, actionable feedback rather than generic observations. Feedback might identify unhandled missing values, suggest feature engineering opportunities, recommend algorithm adjustments, or point out logical errors. Based on evaluation, the Critic either accepts the solution for the next iteration or requests specific improvements.
 
-1. Reviews Actor's code and approach
-2. Checks for logical errors or issues
-3. Assesses model performance
-4. Provides constructive feedback
-5. Suggests specific improvements
-6. Decides to accept or request refinement
+## Iteration Dynamics
 
-### No Tools
+The first iteration starts with the Actor analyzing data and creating an initial solution. The Critic reviews this baseline and provides targeted feedback. In subsequent iterations, the Actor incorporates feedback progressively, addressing issues while maintaining what worked. Each cycle refines the approach through specific adjustments rather than complete rebuilds.
 
-Critically, the Critic **does not** have access to MCP servers. This ensures:
+Convergence occurs when the Critic accepts the solution with high confidence, performance plateaus across iterations, or maximum iterations are reached. Typically, 5 iterations provide good balance between quality and cost.
 
-- Reviews are based on code quality and reasoning
-- No direct data access prevents overfitting to specific examples
-- Feedback focuses on methodology, not implementation details
+## Example Feedback Evolution
 
-### Decision Making
+**Iteration 1:** "F1 score of 0.72 shows promise, but categorical features lack encoding and missing values in 'age' remain unhandled. Apply one-hot encoding and imputation in the next iteration."
 
-The Critic evaluates:
+**Iteration 3:** "Improvement to F1 0.84 with solid preprocessing. Consider extracting temporal features from 'date' column and exploring interaction terms between 'age' and 'income'. Current solution is acceptable but refinable."
 
-- **Code Quality**: Is the approach sound?
-- **Data Handling**: Are preprocessing steps appropriate?
-- **Model Selection**: Is the algorithm suitable for the task?
-- **Performance**: Are metrics acceptable?
-- **Generalization**: Will this work on test data?
-
-Based on evaluation, the Critic either:
-
-- **Accepts**: Solution is good enough, proceed to next iteration
-- **Rejects**: Provide specific feedback for improvement
-
-## Iteration Loop
-
-```
-Iteration 1:
-  Actor analyzes data → trains model → submits solution
-  Critic reviews → provides feedback
-
-Iteration 2:
-  Actor reads feedback → adjusts approach → trains improved model
-  Critic reviews → provides feedback
-
-...
-
-Iteration N:
-  Actor refines final solution
-  Critic accepts → predictions generated
-```
-
-## Feedback Examples
-
-### Typical Critic Feedback
-
-**Iteration 1:**
-> "The initial model shows promise (F1: 0.72), but there are issues:
-> 1. Several categorical features weren't encoded
-> 2. No handling of missing values in 'age' column
-> 3. Consider feature scaling for tree-based models
-> Please address these in the next iteration."
-
-**Iteration 3:**
-> "Good improvement (F1: 0.84). The preprocessing is solid, but:
-> 1. Try feature engineering on 'date' column (extract month/day)
-> 2. Consider interaction features between 'age' and 'income'
-> Current solution is acceptable but can be better."
-
-**Iteration 5:**
-> "Excellent work (F1: 0.89). The solution is comprehensive:
-> - Proper encoding and scaling
-> - Good feature engineering
-> - Well-tuned hyperparameters
-> This solution is ready for production."
+**Iteration 5:** "Excellent F1 of 0.89 with comprehensive feature engineering, proper encoding, and well-tuned hyperparameters. Solution is production-ready."
 
 ## Memory Integration
 
-Both agents benefit from long-term memory:
-
-### Actor Memory
-
-Retrieves past solutions for similar tasks:
-
-- Preprocessing strategies that worked
-- Successful feature engineering patterns
-- Algorithm choices for similar data
-- Hyperparameter configurations
-
-### Critic Memory
-
-Recalls feedback patterns:
-
-- Common pitfalls to watch for
-- Quality standards for different task types
-- Evaluation criteria that matter
-
-## Convergence
-
-The loop typically runs 5 iterations (configurable). Convergence happens when:
-
-1. Critic accepts solution with high confidence
-2. Performance plateaus across iterations
-3. Maximum iterations reached
+Both agents benefit from ChromaDB-based long-term memory. The Actor retrieves preprocessing strategies, feature engineering patterns, and algorithm choices from similar past tasks. The Critic recalls common pitfalls, quality standards, and evaluation criteria relevant to the task type. This enables transfer learning across problems and faster convergence on novel datasets.
 
 ## Benefits
 
-### Why Actor-Critic?
-
-**vs. Single Agent:**
-- Separation of concerns reduces errors
-- Critic catches Actor's mistakes
-- Iterative refinement improves quality
-
-**vs. Hard-coded Pipeline:**
-- Flexible adaptation to data characteristics
-- Learning from experience
-- Natural language feedback is interpretable
-
-**vs. Other AutoML:**
-- Fewer wasted iterations (guided by feedback)
-- Transparent reasoning
-- Transfer learning via memory
+Separating solving from reviewing reduces errors through independent evaluation. Iterative refinement with targeted feedback produces higher quality outcomes than single-pass approaches. Natural language feedback provides interpretable insight into decision-making. Memory-based transfer learning reduces wasted iterations on similar problems.
 
 ## Configuration
 
-Control the Actor-Critic loop:
+Control the refinement process through iteration count:
 
 ```python
-scald = Scald(
-    max_iterations=5,      # Number of refinement cycles
-    # Other options...
-)
+scald = Scald(max_iterations=5)  # Default balance
 ```
 
-## Next Steps
+Increase for complex tasks requiring more refinement; decrease for simple problems or faster prototyping.
 
-- [MCP Servers](mcp-servers.md) - Tools available to the Actor
-- [Python API](usage/api.md) - Programmatic control
-- [Configuration](usage/configuration.md) - Tuning parameters
+Continue to [MCP Servers](mcp-servers.md) to understand the Actor's toolkit.

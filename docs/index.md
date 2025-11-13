@@ -2,32 +2,19 @@
 
 **Scalable Collaborative Agents for Data Science**
 
-Scald is an automated machine learning framework that uses collaborative AI agents to handle the complete ML workflow—from exploratory data analysis to model training and evaluation.
+<div align="center">
+  <img src="../assets/logo.svg" alt="Scald Logo" width="200"/>
+</div>
 
-## What is Scald?
+Scald automates machine learning workflows using collaborative AI agents and the Model Context Protocol. Unlike traditional AutoML frameworks that rely on exhaustive search or rigid pipelines, Scald employs two specialized agents—Actor and Critic—that iteratively refine solutions through feedback loops.
 
-Scald combines the Actor-Critic pattern with Model Context Protocol (MCP) servers to create an intelligent AutoML system. Instead of rigid pipelines, Scald uses two specialized agents that work together:
+## Core Approach
 
-- **Actor**: A data scientist agent that explores data, engineers features, and trains models
-- **Critic**: A reviewer agent that evaluates solutions and provides feedback
+The Actor agent analyzes data, engineers features, and trains models using six specialized MCP servers as tools. The Critic agent evaluates each solution and provides targeted feedback. Through iterative refinement (typically 5 cycles), this collaboration produces optimized models while learning from past experiences via ChromaDB-based memory.
 
-Through iterative refinement (typically 5 iterations), these agents converge on optimal solutions while learning from past experiences via long-term memory.
+Scald supports classification and regression tasks using gradient boosting algorithms (CatBoost, LightGBM, XGBoost), with automatic EDA, preprocessing, and hyperparameter tuning.
 
-## Key Features
-
-- **Intelligent Automation**: Agents make decisions based on data characteristics, not hardcoded rules
-- **Iterative Refinement**: Solutions improve through Actor-Critic feedback loops
-- **Learning System**: ChromaDB-based memory learns from previous tasks
-- **Production Ready**: Comprehensive logging, cost tracking, and artifact preservation
-- **Flexible Integration**: Use via CLI or Python API
-
-## Supported Tasks
-
-- Binary and multiclass classification
-- Regression
-- Boosting algorithms: CatBoost, LightGBM, XGBoost
-
-## Quick Example
+## Quick Start
 
 ```python
 from scald import Scald
@@ -43,12 +30,20 @@ predictions = await scald.run(
 
 ## Why Scald?
 
-Traditional AutoML frameworks rely on exhaustive search or predefined strategies. Scald takes a different approach—using LLM-powered agents that reason about your data, learn from experience, and adapt their strategies accordingly.
+Traditional AutoML performs exhaustive grid searches or follows predefined strategies. Scald's agents reason about data characteristics, adapt strategies dynamically, and transfer knowledge between tasks. This results in higher quality solutions with fewer wasted iterations and transparent, interpretable decision-making throughout the process.
 
-The result is a system that's both more flexible and more intelligent, capable of handling novel data patterns without manual intervention.
+## Architecture
 
-## Get Started
+<div align="center">
+  <img src="../assets/arch.svg" alt="Scald Architecture" width="600"/>
+</div>
 
-- [Installation](installation.md) - Set up Scald in minutes
-- [Quick Start](quickstart.md) - Run your first AutoML task
-- [Architecture](architecture.md) - Understand how Scald works
+The system orchestrates Actor-Critic loops with workspace isolation, comprehensive logging, and cost tracking. Each session produces artifacts, predictions, and detailed execution logs for full reproducibility.
+
+## Navigation
+
+- [Installation](installation.md) - Setup in minutes
+- [Quick Start](quickstart.md) - First AutoML task
+- [Architecture](architecture.md) - System design
+- [Actor-Critic Pattern](actor-critic.md) - Agent collaboration
+- [MCP Servers](mcp-servers.md) - Available tools

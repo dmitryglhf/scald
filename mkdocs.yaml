@@ -1,8 +1,8 @@
 site_name: Scald
 site_description: Scalable Collaborative Agents for Data Science
 
-repo_name: scald
-repo_url: https://github.com/yourusername/scald
+repo_name: Scald
+repo_url: https://github.com/dmitryglhf/scald
 edit_uri: edit/main/docs/
 
 nav:
