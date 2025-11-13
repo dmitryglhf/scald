@@ -15,32 +15,26 @@
 
 ## Overview
 
-Scald automates machine learning workflows using Actor-Critic agents and MCP servers.
+Scald automates machine learning workflows through collaborative AI agents using the Actor-Critic pattern. The Actor agent explores data, engineers features, and trains models using six specialized MCP servers. The Critic agent evaluates solutions and provides targeted feedback for iterative refinement. This approach combines LLM-powered reasoning with gradient boosting algorithms (CatBoost, LightGBM, XGBoost) for both classification and regression tasks.
 
-**Key features:**
-- Agent-driven EDA, preprocessing, and model training
-- Boosting algorithms: CatBoost, LightGBM, XGBoost
-- MCP server integration for data operations
-- Iterative refinement via Actor-Critic feedback loop
+The system learns from past experiences through ChromaDB-based memory, enabling transfer learning across datasets. Each iteration produces executable code artifacts, comprehensive logs, and cost tracking for full reproducibility.
 
 ## Installation
 
 Install from PyPI:
+
 ```bash
 pip install scald
 ```
 
-Or with uv:
+Configure API credentials:
+
 ```bash
-uv pip install scald
+cp .env.example .env  # Add your OpenRouter API key
 ```
 
-Configure environment variables:
-```bash
-cp .env.example .env  # Add your api_key and base_url to .env
-```
+For development work, clone the repository and install with all dependencies:
 
-For development, clone the repository:
 ```bash
 git clone https://github.com/dmitryglhf/scald.git
 cd scald
@@ -49,13 +43,13 @@ uv sync
 
 ## Usage
 
-### CLI
+Run AutoML from the command line:
 
 ```bash
 scald --train data/train.csv --test data/test.csv --target price --task-type regression
 ```
 
-### Python API
+Or use the Python API for programmatic control:
 
 ```python
 from scald import Scald
@@ -69,41 +63,31 @@ predictions = await scald.run(
 )
 ```
 
-## Architecture
+The Actor-Critic loop executes for the specified iterations (default: 5), producing predictions and saving all artifacts to a timestamped session directory.
 
-- Actor: Analyzes data and trains models using MCP tools
-- Critic: Evaluates solutions, provides feedback, decides acceptance
-- MCP Servers: data-analysis, data-preview, data-processing, machine-learning, file-operations, sequential-thinking
+## Architecture
 
 <img src="./assets/arch.svg" alt="arch"/>
 
-## Benchmarks
-
-WIP...
-
+The Actor agent has access to specialized MCP servers for data preview, statistical analysis, preprocessing, model training, file operations, and structured reasoning. The Critic agent reviews solutions without tool access to maintain evaluation objectivity. This separation enables independent verification while the memory system accumulates experience for improved performance on similar tasks.
 
 ## Documentation
 
-Serve documentation locally:
+Full documentation available at [dmitryglhf.github.io/scald](https://dmitryglhf.github.io/scald/)
 
-1. Install documentation dependencies:
+Serve locally:
 
 ```bash
 uv sync --group docs
-```
-
-2. Serve documentation:
-
-```bash
 mkdocs serve
 ```
 
-Documentation will be available at http://localhost:8000
-
 ## Development
 
+Run tests and code quality checks:
+
 ```bash
-make test      # Run tests
+make test      # Run tests with
 make lint      # Check code quality
 make format    # Format code
 make help      # Show all commands
@@ -111,6 +95,4 @@ make help      # Show all commands
 
 ## Requirements
 
-- Python 3.11+
-- uv
-- API key for LLM
+Python 3.11+, uv package manager, and an API key from OpenRouter or compatible LLM provider.
