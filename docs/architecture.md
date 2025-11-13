@@ -3,7 +3,7 @@
 Scald orchestrates collaborative AI agents, MCP servers, and a learning system to automate machine learning workflows.
 
 <div align="center">
-  <img src="../assets/arch.svg" alt="Scald Architecture" width="700"/>
+  <img src="assets/arch.svg" alt="Scald Architecture" width="700"/>
 </div>
 
 ## Core Components

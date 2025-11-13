@@ -3,7 +3,7 @@
 **Scalable Collaborative Agents for Data Science**
 
 <div align="center">
-  <img src="../assets/logo.svg" alt="Scald Logo" width="200"/>
+  <img src="assets/logo.svg" alt="Scald Logo" width="200"/>
 </div>
 
 Scald automates machine learning workflows using collaborative AI agents and the Model Context Protocol. Unlike traditional AutoML frameworks that rely on exhaustive search or rigid pipelines, Scald employs two specialized agents—Actor and Critic—that iteratively refine solutions through feedback loops.
@@ -35,7 +35,7 @@ Traditional AutoML performs exhaustive grid searches or follows predefined strat
 ## Architecture
 
 <div align="center">
-  <img src="../assets/arch.svg" alt="Scald Architecture" width="600"/>
+  <img src="assets/arch.svg" alt="Scald Architecture" width="600"/>
 </div>
 
 The system orchestrates Actor-Critic loops with workspace isolation, comprehensive logging, and cost tracking. Each session produces artifacts, predictions, and detailed execution logs for full reproducibility.
