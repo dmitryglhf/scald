@@ -66,15 +66,7 @@ predictions = await scald.run(
 
 ## Benchmarks
 
-Performance comparison on common datasets against baseline AutoML solutions:
-
-| Dataset | Metric | Scald | Random Forest | AutoGluon | LightAutoML |
-|---------|--------|-------|---------------|-----------|-------------|
-| Iris | Accuracy | 0.97 | 0.95 | 0.96 | 0.96 |
-| Titanic | Accuracy | 0.82 | 0.79 | 0.83 | 0.81 |
-| Wine Quality | F1-Score | 0.76 | 0.72 | 0.78 | 0.75 |
-| Boston Housing | RMSE | 3.45 | 4.12 | 3.38 | 3.52 |
-| Diabetes | R² | 0.48 | 0.42 | 0.51 | 0.47 |
+WIP...
 
 
 ## Documentation
@@ -108,4 +100,4 @@ make help      # Show all commands
 
 - Python 3.11+
 - uv
-- OpenRouter API key
+- API key for LLM
