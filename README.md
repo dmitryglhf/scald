@@ -25,14 +25,26 @@ Scald automates machine learning workflows using Actor-Critic agents and MCP ser
 
 ## Installation
 
-Install Python dependencies:
+Install from PyPI:
 ```bash
-uv sync
+pip install scald
+```
+
+Or with uv:
+```bash
+uv pip install scald
 ```
 
 Configure environment variables:
 ```bash
 cp .env.example .env  # Add your api_key and base_url to .env
+```
+
+For development, clone the repository:
+```bash
+git clone https://github.com/dmitryglhf/scald.git
+cd scald
+uv sync
 ```
 
 ## Usage
