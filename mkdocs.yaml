@@ -1,0 +1,77 @@
+site_name: Scald
+site_description: Scalable Collaborative Agents for Data Science
+
+repo_name: scald
+repo_url: https://github.com/yourusername/scald
+edit_uri: edit/main/docs/
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: installation.md
+      - Quick Start: quickstart.md
+  - Core Concepts:
+      - Architecture: architecture.md
+      - Actor-Critic Pattern: actor-critic.md
+      - MCP Servers: mcp-servers.md
+  - Usage:
+      - CLI: usage/cli.md
+      - Python API: usage/api.md
+      - Configuration: usage/configuration.md
+  - API Reference: api.md
+
+theme:
+  name: "material"
+  palette:
+    - media: "(prefers-color-scheme)"
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-auto
+        name: "Switch to light mode"
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: "Switch to dark mode"
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: "Switch to system preference"
+  features:
+    - search.suggest
+    - search.highlight
+    - content.code.annotate
+    - content.code.copy
+    - navigation.sections
+    - navigation.tracking
+    - toc.follow
+
+markdown_extensions:
+  - tables
+  - admonition
+  - attr_list
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_source: false
+            members_order: source
+            separate_signature: true
+            show_signature_annotations: true

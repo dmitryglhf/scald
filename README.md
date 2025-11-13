@@ -77,6 +77,24 @@ Performance comparison on common datasets against baseline AutoML solutions:
 | Diabetes | R² | 0.48 | 0.42 | 0.51 | 0.47 |
 
 
+## Documentation
+
+Serve documentation locally:
+
+1. Install documentation dependencies:
+
+```bash
+uv sync --group docs
+```
+
+2. Serve documentation:
+
+```bash
+mkdocs serve
+```
+
+Documentation will be available at http://localhost:8000
+
 ## Development
 
 ```bash
