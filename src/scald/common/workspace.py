@@ -61,9 +61,17 @@ def save_workspace_artifacts(solution: ActorSolution) -> Optional[Path]:
             saved_predictions_path = dest_path
             logger.info(f"Saved {csv_file.name} to: {dest_path}")
 
-    # Save actor report
-    if solution.report:
-        report_path = save_text(solution.report, "actor_report.md")
+    # Save actor report sections
+    report_text = "\n\n".join(
+        [
+            f"# Data Analysis\n{solution.data_analysis}",
+            f"# Preprocessing\n{solution.preprocessing}",
+            f"# Model Training\n{solution.model_training}",
+            f"# Results\n{solution.results}",
+        ]
+    )
+    if report_text.strip():
+        report_path = save_text(report_text, "actor_report.md")
         logger.info(f"Saved actor report to: {report_path}")
 
     return saved_predictions_path

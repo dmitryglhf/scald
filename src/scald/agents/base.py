@@ -1,6 +1,6 @@
 import os
 from abc import ABC, abstractmethod
-from typing import Any, Optional, Type
+from typing import Any, Generic, Optional, Type, TypeVar
 
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -21,8 +21,10 @@ DEFAULT_TEMPERATURE = float(os.getenv("DEFAULT_TEMPERATURE", 0.3))
 DEFAULT_TIMEOUT = int(os.getenv("DEFAULT_TIMEOUT", 120))
 DEFAULT_RETRIES = int(os.getenv("DEFAULT_RETRIES", 3))
 
+DepsT = TypeVar("DepsT")
 
-class BaseAgent(UsageTrackingMixin, ABC):
+
+class BaseAgent(UsageTrackingMixin, ABC, Generic[DepsT]):
     """Base class for all agents with common initialization and configuration."""
 
     def __init__(
@@ -60,15 +62,14 @@ class BaseAgent(UsageTrackingMixin, ABC):
         """Override to specify MCP tools for this agent. Returns empty list by default."""
         return []
 
-    def _create_agent(self) -> Agent:
+    def _create_agent(self) -> Agent[DepsT, Any]:
         system_prompt = self._get_system_prompt()
         output_type = self._get_output_type()
         mcp_tools = self._get_mcp_tools()
 
-        # Get toolsets if MCP tools are specified
         toolsets = get_mcp_toolsets(mcp_tools) if mcp_tools else []
 
-        return Agent(
+        return Agent[DepsT, Any](
             name=self.__class__.__name__,
             model=self._model,
             output_type=output_type,
@@ -88,8 +89,7 @@ class BaseAgent(UsageTrackingMixin, ABC):
         """Returns output type for structured responses."""
         pass
 
-    async def _run_agent(self, prompt: str) -> Any:
-        """Run agent with given prompt and return structured output."""
-        result = await self.agent.run(prompt)
+    async def _run_agent(self, prompt: str, deps: DepsT) -> Any:
+        result = await self.agent.run(prompt, deps=deps)
         self._usage = result.usage()
         return result.output

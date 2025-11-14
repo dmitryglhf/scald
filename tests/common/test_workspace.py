@@ -1,4 +1,3 @@
-import json
 import tempfile
 from pathlib import Path
 
@@ -138,7 +137,6 @@ class TestArtifactSaving:
     """Tests for saving workspace artifacts."""
 
     def test_save_workspace_artifacts_with_predictions_path(self, temp_log_dir):
-        """Should save predictions CSV to session directory."""
         setup_logging(base_log_dir=temp_log_dir, session_name="test")
 
         create_workspace_directories()
@@ -147,9 +145,10 @@ class TestArtifactSaving:
 
         solution = ActorSolution(
             predictions_path=predictions_file,
-            predictions=[1, 2, 3],
-            metrics={"accuracy": 0.95},
-            report="Test report",
+            data_analysis="Test data analysis",
+            preprocessing="Test preprocessing",
+            model_training="Test model",
+            results="Test results",
         )
 
         saved_path = save_workspace_artifacts(solution)
@@ -160,13 +159,18 @@ class TestArtifactSaving:
         assert saved_path.name == "predictions.csv"
 
     def test_save_workspace_artifacts_saves_report(self, temp_log_dir):
-        """Should save actor report to session directory."""
         setup_logging(base_log_dir=temp_log_dir, session_name="test")
 
+        create_workspace_directories()
+        predictions_file = ACTOR_WORKSPACE / "output" / "predictions.csv"
+        predictions_file.write_text("prediction\n1\n2\n3\n")
+
         solution = ActorSolution(
-            predictions=[1, 2, 3],
-            metrics={},
-            report="Detailed analysis report with multiple lines.",
+            predictions_path=predictions_file,
+            data_analysis="Detailed analysis",
+            preprocessing="Multiple preprocessing steps",
+            model_training="Model details",
+            results="Results summary",
         )
 
         save_workspace_artifacts(solution)
@@ -176,28 +180,22 @@ class TestArtifactSaving:
         assert "Detailed analysis" in report_path.read_text()
 
     def test_save_workspace_artifacts_saves_metrics(self, temp_log_dir):
-        """Should save metrics as JSON."""
         setup_logging(base_log_dir=temp_log_dir, session_name="test")
 
+        create_workspace_directories()
+        predictions_file = ACTOR_WORKSPACE / "output" / "predictions.csv"
+        predictions_file.write_text("prediction\n1\n2\n3\n")
+
         solution = ActorSolution(
-            predictions=[1, 2, 3],
-            metrics={"accuracy": 0.95, "f1": 0.93, "precision": 0.94},
-            report="Test",
+            predictions_path=predictions_file,
         )
 
         save_workspace_artifacts(solution)
 
         metrics_path = get_session_dir() / "metrics.json"
-        assert metrics_path.exists()
-
-        with open(metrics_path) as f:
-            metrics = json.load(f)
-        assert metrics["accuracy"] == 0.95
-        assert metrics["f1"] == 0.93
-        assert metrics["precision"] == 0.94
+        assert not metrics_path.exists()
 
     def test_save_workspace_artifacts_finds_csv_in_output(self, temp_log_dir):
-        """Should find CSV files in output directory."""
         setup_logging(base_log_dir=temp_log_dir, session_name="test")
 
         create_workspace_directories()
@@ -205,9 +203,7 @@ class TestArtifactSaving:
         predictions_file.write_text("prediction\n0\n1\n")
 
         solution = ActorSolution(
-            predictions=[0, 1],
-            metrics={},
-            report="",
+            predictions_path=predictions_file,
         )
 
         saved_path = save_workspace_artifacts(solution)
@@ -217,30 +213,33 @@ class TestArtifactSaving:
         assert saved_path.name == "results.csv"
 
     def test_save_workspace_artifacts_without_predictions(self, temp_log_dir):
-        """Should handle solution without predictions file."""
         setup_logging(base_log_dir=temp_log_dir, session_name="test")
 
+        create_workspace_directories()
+        predictions_file = ACTOR_WORKSPACE / "output" / "predictions.csv"
+        predictions_file.write_text("prediction\n1\n2\n3\n")
+
         solution = ActorSolution(
-            predictions=[1, 2, 3],
-            metrics={"accuracy": 0.95},
-            report="Report without predictions file",
+            predictions_path=predictions_file,
+            data_analysis="Data analysis",
         )
 
         saved_path = save_workspace_artifacts(solution)
 
-        assert saved_path is None
+        assert saved_path is not None
         report_path = get_session_dir() / "actor_report.md"
         assert report_path.exists()
 
     def test_save_workspace_artifacts_empty_solution(self, temp_log_dir):
-        """Should handle empty solution gracefully."""
         setup_logging(base_log_dir=temp_log_dir, session_name="test")
 
+        create_workspace_directories()
+        predictions_file = ACTOR_WORKSPACE / "output" / "predictions.csv"
+        predictions_file.write_text("prediction\n")
+
         solution = ActorSolution(
-            predictions=[],
-            metrics={},
-            report="",
+            predictions_path=predictions_file,
         )
 
         saved_path = save_workspace_artifacts(solution)
-        assert saved_path is None
+        assert saved_path is not None

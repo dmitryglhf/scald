@@ -28,29 +28,12 @@ def memory_manager(temp_memory_dir):
 
 @pytest.fixture
 def sample_actor_solution():
-    """Sample ActorSolution for testing."""
     return ActorSolution(
         predictions_path=Path("/output/predictions.csv"),
-        predictions=[0, 1, 2, 1, 0, 2, 1],
-        metrics={"accuracy": 0.92, "f1": 0.90, "precision": 0.91},
-        report="""Dataset Analysis:
-- Shape: 120 samples, 4 features
-- Target: Species (3 classes)
-- No missing values
-
-Preprocessing:
-- No encoding needed (all numeric)
-- Standard scaling applied
-
-Model Training:
-- Used CatBoost classifier
-- Hyperparameters: depth=6, learning_rate=0.1
-- Training accuracy: 0.95
-- Test accuracy: 0.92
-
-Results:
-- Good generalization
-- No overfitting detected""",
+        data_analysis="Shape: 120 samples, 4 features. Target: Species (3 classes). No missing values.",
+        preprocessing="No encoding needed (all numeric). Standard scaling applied.",
+        model_training="Used CatBoost classifier. Hyperparameters: depth=6, learning_rate=0.1",
+        results="Training accuracy: 0.95. Test accuracy: 0.92. Good generalization, no overfitting detected.",
     )
 
 
@@ -113,7 +96,7 @@ class TestSaveIterationContract:
         self, memory_manager, sample_actor_solution, sample_critic_evaluation
     ):
         """Contract: save accepts correct parameters and returns entry_id."""
-        entry_id = await memory_manager.save(
+        entry_id = memory_manager.save(
             actor_solution=sample_actor_solution,
             critic_evaluation=sample_critic_evaluation,
             task_type="classification",
@@ -127,7 +110,7 @@ class TestSaveIterationContract:
         self, memory_manager, sample_actor_solution, sample_critic_evaluation
     ):
         """Contract: Saved entry must exist in ChromaDB collection."""
-        entry_id = await memory_manager.save(
+        entry_id = memory_manager.save(
             actor_solution=sample_actor_solution,
             critic_evaluation=sample_critic_evaluation,
             task_type="classification",
@@ -143,7 +126,7 @@ class TestSaveIterationContract:
         self, memory_manager, sample_actor_solution, sample_critic_evaluation
     ):
         """Contract: Actor report must be stored as document for semantic search."""
-        entry_id = await memory_manager.save(
+        entry_id = memory_manager.save(
             actor_solution=sample_actor_solution,
             critic_evaluation=sample_critic_evaluation,
             task_type="classification",
@@ -158,7 +141,7 @@ class TestSaveIterationContract:
         self, memory_manager, sample_actor_solution, sample_critic_evaluation
     ):
         """Contract: All relevant metadata must be stored."""
-        entry_id = await memory_manager.save(
+        entry_id = memory_manager.save(
             actor_solution=sample_actor_solution,
             critic_evaluation=sample_critic_evaluation,
             task_type="classification",
@@ -168,17 +151,10 @@ class TestSaveIterationContract:
         result = memory_manager.collection.get(ids=[entry_id])
         metadata = result["metadatas"][0]
 
-        # Required metadata fields
         assert metadata["task_type"] == "classification"
         assert metadata["iteration"] == 1
         assert "critic_evaluation" in metadata
         assert "timestamp" in metadata
-
-        # Metrics must be flattened and stored
-        assert "accuracy" in metadata
-        assert metadata["accuracy"] == 0.92
-        assert "f1" in metadata
-        assert metadata["f1"] == 0.90
 
     @pytest.mark.asyncio
     async def test_save_multiple_iterations_unique_ids(
@@ -187,7 +163,7 @@ class TestSaveIterationContract:
         """Contract: Multiple saves must generate unique entry IDs."""
         entry_ids = []
         for i in range(3):
-            entry_id = await memory_manager.save(
+            entry_id = memory_manager.save(
                 actor_solution=sample_actor_solution,
                 critic_evaluation=sample_critic_evaluation,
                 task_type="classification",
@@ -210,7 +186,7 @@ class TestRetrieveRelevantContextContract:
     @pytest.mark.asyncio
     async def test_retrieve_signature(self, memory_manager):
         """Contract: retrieve returns tuple of context lists."""
-        actor_contexts, critic_contexts = await memory_manager.retrieve(
+        actor_contexts, critic_contexts = memory_manager.retrieve(
             actor_report="Testing classification task",
             task_type="classification",
             top_k=5,
@@ -222,7 +198,7 @@ class TestRetrieveRelevantContextContract:
     @pytest.mark.asyncio
     async def test_retrieve_empty_memory(self, memory_manager):
         """Contract: Empty memory returns empty lists, not None."""
-        actor_contexts, critic_contexts = await memory_manager.retrieve(
+        actor_contexts, critic_contexts = memory_manager.retrieve(
             actor_report="Some task", task_type="classification", top_k=5
         )
 
@@ -235,7 +211,7 @@ class TestRetrieveRelevantContextContract:
     ):
         """Contract: Must return properly structured ActorMemoryContext objects."""
         # Setup: save a memory
-        await memory_manager.save(
+        memory_manager.save(
             actor_solution=sample_actor_solution,
             critic_evaluation=sample_critic_evaluation,
             task_type="classification",
@@ -243,7 +219,7 @@ class TestRetrieveRelevantContextContract:
         )
 
         # Retrieve
-        actor_contexts, _ = await memory_manager.retrieve(
+        actor_contexts, _ = memory_manager.retrieve(
             actor_report=sample_actor_solution.report,
             task_type="classification",
             top_k=5,
@@ -258,7 +234,6 @@ class TestRetrieveRelevantContextContract:
         assert isinstance(context.accepted, bool)
         assert isinstance(context.actions_summary, str)
         assert isinstance(context.feedback_received, str)
-        assert isinstance(context.metrics, dict)
         assert len(context.actions_summary) > 0
 
     @pytest.mark.asyncio
@@ -267,7 +242,7 @@ class TestRetrieveRelevantContextContract:
     ):
         """Contract: Must return properly structured CriticMemoryContext objects."""
         # Setup: save a memory
-        await memory_manager.save(
+        memory_manager.save(
             actor_solution=sample_actor_solution,
             critic_evaluation=sample_critic_evaluation,
             task_type="classification",
@@ -275,7 +250,7 @@ class TestRetrieveRelevantContextContract:
         )
 
         # Retrieve
-        _, critic_contexts = await memory_manager.retrieve(
+        _, critic_contexts = memory_manager.retrieve(
             actor_report=sample_actor_solution.report,
             task_type="classification",
             top_k=5,
@@ -299,7 +274,7 @@ class TestRetrieveRelevantContextContract:
         """Contract: Must respect top_k limit."""
         # Setup: save 10 memories
         for i in range(10):
-            await memory_manager.save(
+            memory_manager.save(
                 actor_solution=sample_actor_solution,
                 critic_evaluation=sample_critic_evaluation,
                 task_type="classification",
@@ -307,7 +282,7 @@ class TestRetrieveRelevantContextContract:
             )
 
         # Retrieve with top_k=3
-        actor_contexts, critic_contexts = await memory_manager.retrieve(
+        actor_contexts, critic_contexts = memory_manager.retrieve(
             actor_report=sample_actor_solution.report,
             task_type="classification",
             top_k=3,
@@ -322,7 +297,7 @@ class TestRetrieveRelevantContextContract:
     ):
         """Contract: Must filter results by task_type."""
         # Setup: save classification memory
-        await memory_manager.save(
+        memory_manager.save(
             actor_solution=sample_actor_solution,
             critic_evaluation=sample_critic_evaluation,
             task_type="classification",
@@ -331,9 +306,13 @@ class TestRetrieveRelevantContextContract:
 
         # Setup: save regression memory
         regression_solution = ActorSolution(
-            predictions=[], metrics={"mse": 0.15}, report="Regression task on housing data"
+            predictions_path=Path("/output/predictions.csv"),
+            data_analysis="Housing dataset with numerical features",
+            preprocessing="Standard scaling applied",
+            model_training="Linear regression model",
+            results="MSE: 0.15",
         )
-        await memory_manager.save(
+        memory_manager.save(
             actor_solution=regression_solution,
             critic_evaluation=sample_critic_evaluation,
             task_type="regression",
@@ -341,7 +320,7 @@ class TestRetrieveRelevantContextContract:
         )
 
         # Query for classification only
-        actor_contexts, _ = await memory_manager.retrieve(
+        actor_contexts, _ = memory_manager.retrieve(
             actor_report="Classification task",
             task_type="classification",
             top_k=10,
@@ -365,14 +344,14 @@ class TestContextTransformationContract:
         self, memory_manager, sample_actor_solution, sample_critic_evaluation
     ):
         """Contract: ActorMemoryContext.actions_summary must contain actor's report."""
-        await memory_manager.save(
+        memory_manager.save(
             actor_solution=sample_actor_solution,
             critic_evaluation=sample_critic_evaluation,
             task_type="classification",
             iteration=1,
         )
 
-        actor_contexts, _ = await memory_manager.retrieve(
+        actor_contexts, _ = memory_manager.retrieve(
             actor_report=sample_actor_solution.report,
             task_type="classification",
             top_k=1,
@@ -389,14 +368,14 @@ class TestContextTransformationContract:
         self, memory_manager, sample_actor_solution, sample_critic_evaluation
     ):
         """Contract: ActorMemoryContext.feedback_received must match critic's feedback."""
-        await memory_manager.save(
+        memory_manager.save(
             actor_solution=sample_actor_solution,
             critic_evaluation=sample_critic_evaluation,
             task_type="classification",
             iteration=1,
         )
 
-        actor_contexts, _ = await memory_manager.retrieve(
+        actor_contexts, _ = memory_manager.retrieve(
             actor_report=sample_actor_solution.report,
             task_type="classification",
             top_k=1,
@@ -410,14 +389,14 @@ class TestContextTransformationContract:
         self, memory_manager, sample_actor_solution, sample_critic_evaluation
     ):
         """Contract: CriticMemoryContext.actions_observed must contain actor's report."""
-        await memory_manager.save(
+        memory_manager.save(
             actor_solution=sample_actor_solution,
             critic_evaluation=sample_critic_evaluation,
             task_type="classification",
             iteration=1,
         )
 
-        _, critic_contexts = await memory_manager.retrieve(
+        _, critic_contexts = memory_manager.retrieve(
             actor_report=sample_actor_solution.report,
             task_type="classification",
             top_k=1,
@@ -434,14 +413,14 @@ class TestContextTransformationContract:
         self, memory_manager, sample_actor_solution, sample_critic_evaluation
     ):
         """Contract: CriticMemoryContext.feedback_given must match what was given."""
-        await memory_manager.save(
+        memory_manager.save(
             actor_solution=sample_actor_solution,
             critic_evaluation=sample_critic_evaluation,
             task_type="classification",
             iteration=1,
         )
 
-        _, critic_contexts = await memory_manager.retrieve(
+        _, critic_contexts = memory_manager.retrieve(
             actor_report=sample_actor_solution.report,
             task_type="classification",
             top_k=1,
@@ -467,7 +446,7 @@ class TestUtilityMethodsContract:
         """Contract: clear must remove all entries from collection."""
         # Save some entries
         for i in range(3):
-            await memory_manager.save(
+            memory_manager.save(
                 actor_solution=sample_actor_solution,
                 critic_evaluation=sample_critic_evaluation,
                 task_type="classification",

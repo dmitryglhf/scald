@@ -8,11 +8,11 @@ datasets:
   # - name: car
   #   openml_task_id: 146821
 
-  - name: christine
-    openml_task_id: 168908
+  # - name: christine
+  # openml_task_id: 168908
 
-  # - name: cnae-9
-  #   openml_task_id: 9981
+  - name: cnae-9
+    openml_task_id: 9981
 
   # - name: credit-g
   #   openml_task_id: 31

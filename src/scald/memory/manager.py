@@ -6,21 +6,20 @@ from pathlib import Path
 from typing import Literal, Optional
 
 from chromadb import PersistentClient
-from chromadb.api import ClientAPI
 from chromadb.api.models.Collection import Collection
-from chromadb.api.types import QueryResult
 from chromadb.utils.embedding_functions import JinaEmbeddingFunction
 
 from scald.agents.actor import ActorSolution
 from scald.agents.critic import CriticEvaluation
+from scald.common.logger import get_logger
 from scald.memory.types import ActorMemoryContext, CriticMemoryContext
 
 TaskType = Literal["classification", "regression"]
 
+logger = get_logger()
+
 
 class MemoryManager:
-    """Long-term memory management via ChromaDB with Jina embeddings"""
-
     COLLECTION_NAME = "scald_memory"
     MEMORY_DIR = Path.home() / ".scald" / "chromadb"
 
@@ -31,23 +30,26 @@ class MemoryManager:
         memory_dir.mkdir(parents=True, exist_ok=True)
 
         self.embedding_fn = self._create_embedding_function()
-        self.client: ClientAPI = PersistentClient(path=str(memory_dir))
+        self.client = PersistentClient(path=str(memory_dir))
         self.collection: Collection = self.client.get_or_create_collection(
             name=self.COLLECTION_NAME,
             embedding_function=self.embedding_fn,
+            metadata={"hnsw:space": "cosine"},
         )
 
-    async def retrieve(
+    def retrieve(
         self, actor_report: str, task_type: TaskType, top_k: int = 5
     ) -> tuple[list[ActorMemoryContext], list[CriticMemoryContext]]:
-        # Query ChromaDB with filters
-        q_result: QueryResult | None = self.collection.query(
-            query_texts=[actor_report],
-            n_results=top_k,
-            where={"task_type": task_type},
-        )
+        try:
+            q_result = self.collection.query(
+                query_texts=[actor_report],
+                n_results=top_k,
+                where={"task_type": task_type},
+            )
+        except Exception as e:
+            logger.error(f"ChromaDB query failed: {e}")
+            return [], []
 
-        # Handle empty or None results
         if not q_result or not q_result.get("ids") or not q_result["ids"][0]:
             return [], []
 
@@ -58,28 +60,20 @@ class MemoryManager:
             document = q_result["documents"][0][i]
             metadata = q_result["metadatas"][0][i]
 
-            # Deserialize critic_evaluation from JSON
             critic_eval_data = json.loads(metadata["critic_evaluation"])
             critic_evaluation = CriticEvaluation(**critic_eval_data)
 
-            # Extract known fields and reconstruct metrics
-            known_fields = {"task_type", "iteration", "critic_evaluation", "timestamp"}
-            metrics = {k: v for k, v in metadata.items() if k not in known_fields}
-
-            # Create ActorMemoryContext
             actor_ctx = ActorMemoryContext(
                 iteration=metadata["iteration"],
-                accepted=critic_evaluation.score == 1,
+                accepted=metadata["critic_score"] == 1,
                 actions_summary=document,
                 feedback_received=critic_evaluation.feedback,
-                metrics=metrics,
             )
             actor_contexts.append(actor_ctx)
 
-            # Create CriticMemoryContext
             critic_ctx = CriticMemoryContext(
                 iteration=metadata["iteration"],
-                score=critic_evaluation.score,
+                score=metadata["critic_score"],
                 actions_observed=document,
                 feedback_given=critic_evaluation.feedback,
             )
@@ -87,7 +81,7 @@ class MemoryManager:
 
         return actor_contexts, critic_contexts
 
-    async def save(
+    def save(
         self,
         actor_solution: ActorSolution,
         critic_evaluation: CriticEvaluation,
@@ -96,27 +90,33 @@ class MemoryManager:
     ) -> str:
         entry_id = str(uuid.uuid4())
 
-        # Create metadata with flattened metrics
         metadata = {
             "task_type": task_type,
             "iteration": iteration,
+            "critic_score": critic_evaluation.score,
             "critic_evaluation": critic_evaluation.model_dump_json(),
             "timestamp": datetime.now().isoformat(),
         }
 
-        self.collection.add(
-            ids=[entry_id],
-            documents=[actor_solution.report],
-            metadatas=[metadata],
-        )
+        try:
+            self.collection.add(
+                ids=[entry_id],
+                documents=[actor_solution.report],
+                metadatas=[metadata],
+            )
+        except Exception as e:
+            logger.error(f"Failed to save to ChromaDB: {e}")
+            raise
 
         return entry_id
 
     def clear(self) -> None:
-        """Remove all entries from collection"""
-        all_ids = self.collection.get()["ids"]
-        if all_ids:
-            self.collection.delete(ids=all_ids)
+        self.client.delete_collection(name=self.COLLECTION_NAME)
+        self.collection = self.client.get_or_create_collection(
+            name=self.COLLECTION_NAME,
+            embedding_function=self.embedding_fn,
+            metadata={"hnsw:space": "cosine"},
+        )
 
     def _create_embedding_function(self) -> JinaEmbeddingFunction:
         api_key = os.getenv("JINA_API_KEY")

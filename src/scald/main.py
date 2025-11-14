@@ -20,12 +20,11 @@ TaskType = Literal["classification", "regression"]
 
 
 class Scald:
-    """Main orchestrator for Actor-Critic ML automation."""
-
-    def __init__(self, max_iterations: int = 5):
+    def __init__(self, max_iterations: int = 5, acceptance_threshold: float = 0.75):
         self.max_iterations = max_iterations
+        self.acceptance_threshold = acceptance_threshold
         self.actor = Actor()
-        self.critic = Critic()
+        self.critic = Critic(acceptance_threshold=acceptance_threshold)
         self.mm: MemoryManager = MemoryManager()
 
     async def run(
@@ -42,7 +41,7 @@ class Scald:
         workspace_train, workspace_test = copy_datasets_to_workspace(train_path, test_path)
 
         # Retrieve relevant past experiences from similar tasks
-        actor_memory, critic_memory = await self.mm.retrieve(
+        actor_memory, critic_memory = self.mm.retrieve(
             actor_report="",  # Empty query - filter only by task_type
             task_type=task_type,
             top_k=5,
@@ -60,17 +59,22 @@ class Scald:
                     test_path=workspace_test,
                     target=target,
                     task_type=task_type,
+                    iteration=iteration,
                     feedback=feedback,
                     past_experiences=actor_memory,
                 )
 
                 critic_evaluation = await self.critic.evaluate(
-                    actor_solution,
+                    solution=actor_solution,
+                    train_path=workspace_train,
+                    test_path=workspace_test,
+                    target=target,
+                    task_type=task_type,
                     past_evaluations=critic_memory,
                 )
 
                 # Save iteration to long-term memory
-                entry_id = await self.mm.save(
+                entry_id = self.mm.save(
                     actor_solution=actor_solution,
                     critic_evaluation=critic_evaluation,
                     task_type=task_type,
