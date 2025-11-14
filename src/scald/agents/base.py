@@ -16,7 +16,7 @@ load_dotenv()
 
 logger = get_logger()
 
-DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gpt-oss:20b")
+DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "openai/gpt-5-mini")
 DEFAULT_TEMPERATURE = float(os.getenv("DEFAULT_TEMPERATURE", 0.3))
 DEFAULT_TIMEOUT = int(os.getenv("DEFAULT_TIMEOUT", 120))
 DEFAULT_RETRIES = int(os.getenv("DEFAULT_RETRIES", 3))

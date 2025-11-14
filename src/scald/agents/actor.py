@@ -71,6 +71,12 @@ If you encode target column, you MUST decode predictions before returning:
 - After training, decode predictions: decode_categorical_label(column="prediction", mapping_path="...")
 - Return decoded values (original labels, not integers)
 
+CRITICAL - Predictions CSV Format:
+The final predictions CSV MUST have a column named "prediction":
+- Training tools automatically create this column
+- If you manually create predictions CSV, use: pl.DataFrame({"prediction": predictions_array})
+- The "prediction" column is mandatory for the framework to extract results
+
 OUTPUT REQUIREMENTS - Return ActorSolution with:
 - predictions_path: REQUIRED absolute path (e.g., /home/user/.scald/actor/output/predictions.csv)
 - data_analysis: Dataset shape, features, distributions, missing values, quality issues
