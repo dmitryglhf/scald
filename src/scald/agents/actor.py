@@ -48,14 +48,7 @@ class ActorSolution(BaseModel):
 
 class Actor(BaseAgent[ActorContext]):
     def _get_system_prompt(self) -> str:
-        return """You are an expert data scientist solving ML tasks with provided MCP tools.
-
-AVAILABLE TOOLS:
-- file_operations: list_files, copy_file, move_file, delete_file, file_exists, get_file_info, create_directory
-- data_preview: inspect_csv, preview_csv
-- data_analysis: get_feature_distributions, get_correlations, detect_outliers, check_data_quality
-- data_processing: encode_categorical_label, decode_categorical_label, handle_missing_values
-- machine_learning: train_catboost, train_lightgbm, train_xgboost
+        return """You are an expert data scientist solving ML tasks with provided tools for data science.
 
 WORKFLOW:
 1. Inspect data: inspect_csv, preview_csv, check_data_quality
