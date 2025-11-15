@@ -69,8 +69,8 @@ async def train_catboost(
 ) -> dict:
     """Train CatBoost model and generate predictions. Returns test_metrics and predictions_path."""
     try:
-        # Validate inputs
         if predictions_path and not test_path:
+            await ctx.error("test_path is required when predictions_path is specified")
             return {
                 "success": False,
                 "error": "test_path is required when predictions_path is specified",
@@ -79,6 +79,10 @@ async def train_catboost(
         train_df = pl.read_csv(Path(train_path))
         X_train = train_df.drop(target_column).to_numpy()
         y_train = train_df[target_column].to_numpy()
+
+        await ctx.info(
+            f"Loaded training data: {X_train.shape[0]} rows, {X_train.shape[1]} features"
+        )
 
         params = {
             "iterations": iterations,
@@ -92,10 +96,16 @@ async def train_catboost(
         else:
             model = CatBoostRegressor(**params)
 
+        await ctx.info(
+            f"Training CatBoost {task_type} model (iterations={iterations}, lr={learning_rate})..."
+        )
         model.fit(X_train, y_train)
 
         train_pred = model.predict(X_train)
         train_metrics = _calculate_metrics(y_train, train_pred, task_type)
+
+        metrics_str = ", ".join([f"{k}={v:.4f}" for k, v in train_metrics.items()])
+        await ctx.info(f"Training complete. Metrics: {metrics_str}")
 
         result: dict[str, Any] = {
             "success": True,
@@ -105,25 +115,29 @@ async def train_catboost(
 
         if test_path:
             test_df = pl.read_csv(Path(test_path))
-
-            # Check if target column exists in test data
             has_target = target_column in test_df.columns
 
             if has_target:
-                # Test set has labels (validation mode)
+                await ctx.info(
+                    f"Loaded test data with labels: {test_df.shape[0]} rows (validation mode)"
+                )
                 X_test = test_df.drop(target_column).to_numpy()
                 y_test = test_df[target_column].to_numpy()
                 test_pred = model.predict(X_test)
                 test_metrics = _calculate_metrics(y_test, test_pred, task_type)
                 result["test_metrics"] = test_metrics
+
+                test_metrics_str = ", ".join([f"{k}={v:.4f}" for k, v in test_metrics.items()])
+                await ctx.info(f"Test metrics: {test_metrics_str}")
             else:
-                # Test set has no labels (production mode)
+                await ctx.info(
+                    f"Loaded test data without labels: {test_df.shape[0]} rows (production mode)"
+                )
                 X_test = test_df.to_numpy()
                 test_pred = model.predict(X_test)
 
-            # Save predictions if path provided
             if predictions_path:
-                pred_df = pl.DataFrame({"prediction": test_pred})
+                pred_df = pl.DataFrame({"prediction": test_pred.flatten()})
                 pred_df.write_csv(Path(predictions_path))
                 result["predictions_path"] = predictions_path
                 await ctx.info(f"Saved predictions to {predictions_path}")
@@ -131,10 +145,12 @@ async def train_catboost(
         if model_path:
             model.save_model(model_path)
             result["model_path"] = model_path
+            await ctx.info(f"Saved model to {model_path}")
 
         return result
 
     except Exception as e:
+        await ctx.error(f"CatBoost training failed: {str(e)}")
         return {"success": False, "error": str(e)}
 
 
@@ -157,8 +173,8 @@ async def train_lightgbm(
 ) -> dict:
     """Train LightGBM model and generate predictions. Returns test_metrics and predictions_path."""
     try:
-        # Validate inputs
         if predictions_path and not test_path:
+            await ctx.error("test_path is required when predictions_path is specified")
             return {
                 "success": False,
                 "error": "test_path is required when predictions_path is specified",
@@ -167,6 +183,10 @@ async def train_lightgbm(
         train_df = pl.read_csv(Path(train_path))
         X_train = train_df.drop(target_column).to_numpy()
         y_train = train_df[target_column].to_numpy()
+
+        await ctx.info(
+            f"Loaded training data: {X_train.shape[0]} rows, {X_train.shape[1]} features"
+        )
 
         if task_type == "classification":
             model = LGBMClassifier(
@@ -185,10 +205,16 @@ async def train_lightgbm(
                 random_state=42,
             )
 
+        await ctx.info(
+            f"Training LightGBM {task_type} model (iterations={num_iterations}, lr={learning_rate})..."
+        )
         model.fit(X_train, y_train)
 
         train_pred = model.predict(X_train)
         train_metrics = _calculate_metrics(y_train, train_pred, task_type)
+
+        metrics_str = ", ".join([f"{k}={v:.4f}" for k, v in train_metrics.items()])
+        await ctx.info(f"Training complete. Metrics: {metrics_str}")
 
         result: dict[str, Any] = {
             "success": True,
@@ -198,25 +224,29 @@ async def train_lightgbm(
 
         if test_path:
             test_df = pl.read_csv(Path(test_path))
-
-            # Check if target column exists in test data
             has_target = target_column in test_df.columns
 
             if has_target:
-                # Test set has labels (validation mode)
+                await ctx.info(
+                    f"Loaded test data with labels: {test_df.shape[0]} rows (validation mode)"
+                )
                 X_test = test_df.drop(target_column).to_numpy()
                 y_test = test_df[target_column].to_numpy()
                 test_pred = model.predict(X_test)
                 test_metrics = _calculate_metrics(y_test, test_pred, task_type)
                 result["test_metrics"] = test_metrics
+
+                test_metrics_str = ", ".join([f"{k}={v:.4f}" for k, v in test_metrics.items()])
+                await ctx.info(f"Test metrics: {test_metrics_str}")
             else:
-                # Test set has no labels (production mode)
+                await ctx.info(
+                    f"Loaded test data without labels: {test_df.shape[0]} rows (production mode)"
+                )
                 X_test = test_df.to_numpy()
                 test_pred = model.predict(X_test)
 
-            # Save predictions if path provided
             if predictions_path:
-                pred_df = pl.DataFrame({"prediction": test_pred})
+                pred_df = pl.DataFrame({"prediction": test_pred.flatten()})
                 pred_df.write_csv(Path(predictions_path))
                 result["predictions_path"] = predictions_path
                 await ctx.info(f"Saved predictions to {predictions_path}")
@@ -225,10 +255,12 @@ async def train_lightgbm(
             with open(model_path, "wb") as f:
                 pickle.dump(model, f)
             result["model_path"] = model_path
+            await ctx.info(f"Saved model to {model_path}")
 
         return result
 
     except Exception as e:
+        await ctx.error(f"LightGBM training failed: {str(e)}")
         return {"success": False, "error": str(e)}
 
 
@@ -251,8 +283,8 @@ async def train_xgboost(
 ) -> dict:
     """Train XGBoost model and generate predictions. Returns test_metrics and predictions_path."""
     try:
-        # Validate inputs
         if predictions_path and not test_path:
+            await ctx.error("test_path is required when predictions_path is specified")
             return {
                 "success": False,
                 "error": "test_path is required when predictions_path is specified",
@@ -261,6 +293,10 @@ async def train_xgboost(
         train_df = pl.read_csv(Path(train_path))
         X_train = train_df.drop(target_column).to_numpy()
         y_train = train_df[target_column].to_numpy()
+
+        await ctx.info(
+            f"Loaded training data: {X_train.shape[0]} rows, {X_train.shape[1]} features"
+        )
 
         if task_type == "classification":
             model = XGBClassifier(
@@ -277,10 +313,16 @@ async def train_xgboost(
                 random_state=42,
             )
 
+        await ctx.info(
+            f"Training XGBoost {task_type} model (estimators={n_estimators}, lr={learning_rate})..."
+        )
         model.fit(X_train, y_train)
 
         train_pred = model.predict(X_train)
         train_metrics = _calculate_metrics(y_train, train_pred, task_type)
+
+        metrics_str = ", ".join([f"{k}={v:.4f}" for k, v in train_metrics.items()])
+        await ctx.info(f"Training complete. Metrics: {metrics_str}")
 
         result: dict[str, Any] = {
             "success": True,
@@ -290,25 +332,29 @@ async def train_xgboost(
 
         if test_path:
             test_df = pl.read_csv(Path(test_path))
-
-            # Check if target column exists in test data
             has_target = target_column in test_df.columns
 
             if has_target:
-                # Test set has labels (validation mode)
+                await ctx.info(
+                    f"Loaded test data with labels: {test_df.shape[0]} rows (validation mode)"
+                )
                 X_test = test_df.drop(target_column).to_numpy()
                 y_test = test_df[target_column].to_numpy()
                 test_pred = model.predict(X_test)
                 test_metrics = _calculate_metrics(y_test, test_pred, task_type)
                 result["test_metrics"] = test_metrics
+
+                test_metrics_str = ", ".join([f"{k}={v:.4f}" for k, v in test_metrics.items()])
+                await ctx.info(f"Test metrics: {test_metrics_str}")
             else:
-                # Test set has no labels (production mode)
+                await ctx.info(
+                    f"Loaded test data without labels: {test_df.shape[0]} rows (production mode)"
+                )
                 X_test = test_df.to_numpy()
                 test_pred = model.predict(X_test)
 
-            # Save predictions if path provided
             if predictions_path:
-                pred_df = pl.DataFrame({"prediction": test_pred})
+                pred_df = pl.DataFrame({"prediction": test_pred.flatten()})
                 pred_df.write_csv(Path(predictions_path))
                 result["predictions_path"] = predictions_path
                 await ctx.info(f"Saved predictions to {predictions_path}")
@@ -317,10 +363,12 @@ async def train_xgboost(
             with open(model_path, "wb") as f:
                 pickle.dump(model, f)
             result["model_path"] = model_path
+            await ctx.info(f"Saved model to {model_path}")
 
         return result
 
     except Exception as e:
+        await ctx.error(f"XGBoost training failed: {str(e)}")
         return {"success": False, "error": str(e)}
 
 
@@ -340,12 +388,22 @@ async def ensemble_predictions(
 
     Ensemble multiple predictions with Optuna-optimized weights."""
     try:
+        await ctx.info(f"Loading {len(predictions_paths)} prediction files for ensemble")
+
         predictions_list = []
-        for pred_path in predictions_paths:
+        for i, pred_path in enumerate(predictions_paths):
             pred_df = pl.read_csv(Path(pred_path))
             predictions_list.append(pred_df["prediction"].to_numpy())
+            await ctx.info(
+                f"Loaded prediction {i + 1}: {len(pred_df)} samples from {Path(pred_path).name}"
+            )
 
         y_true = pl.read_csv(Path(true_labels_path))[target_column].to_numpy()
+        await ctx.info(f"Loaded true labels: {len(y_true)} samples")
+
+        await ctx.info(
+            f"Optimizing ensemble weights with Optuna ({n_trials} trials, task={task_type})..."
+        )
 
         def objective(trial: optuna.Trial) -> float:
             weights = [
@@ -371,10 +429,16 @@ async def ensemble_predictions(
         total = sum(best_weights)
         best_weights = [w / total for w in best_weights]
 
+        weights_str = ", ".join([f"model_{i + 1}={w:.4f}" for i, w in enumerate(best_weights)])
+        await ctx.info(f"Optimized weights: {weights_str}")
+
         ensemble_pred = np.sum(
             [w * pred for w, pred in zip(best_weights, predictions_list)], axis=0
         )
         metrics = _calculate_metrics(y_true, ensemble_pred, task_type)
+
+        metrics_str = ", ".join([f"{k}={v:.4f}" for k, v in metrics.items()])
+        await ctx.info(f"Ensemble metrics: {metrics_str}")
 
         result: dict[str, Any] = {
             "success": True,
@@ -386,10 +450,12 @@ async def ensemble_predictions(
             ensemble_df = pl.DataFrame({"prediction": ensemble_pred})
             ensemble_df.write_csv(Path(output_path))
             result["output_path"] = output_path
+            await ctx.info(f"Saved ensemble predictions to {output_path}")
 
         return result
 
     except Exception as e:
+        await ctx.error(f"Ensemble predictions failed: {str(e)}")
         return {"success": False, "error": str(e)}
 
 

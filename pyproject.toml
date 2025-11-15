@@ -24,6 +24,7 @@ dependencies = [
     "scikit-learn>=1.7.2",
     "pydantic-ai>=1.10.0",
     "pydantic>=2.12.3",
+    "pydantic-evals>=1.10.0",
 ]
 
 [project.scripts]

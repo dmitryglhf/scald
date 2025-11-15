@@ -1,63 +1,105 @@
-from typing import TYPE_CHECKING, Optional, Type
+from pathlib import Path
 
-from pydantic import BaseModel, Field
-from toon import encode
+from pydantic_evals.evaluators import EvaluatorContext, LLMJudge
+from pydantic_evals.otel._errors import SpanTreeRecordingError
 
-from scald.agents.actor import ActorSolution
-from scald.agents.base import BaseAgent
-
-if TYPE_CHECKING:
-    from scald.memory.types import CriticMemoryContext
+from scald.models import ActorSolution, CriticEvaluation, CriticMemoryContext
 
 
-class CriticEvaluation(BaseModel):
-    """Evaluation from Critic."""
+class Critic:
+    def __init__(self, acceptance_threshold: float = 0.75):
+        if not 0.0 <= acceptance_threshold <= 1.0:
+            raise ValueError(
+                f"acceptance_threshold must be in [0.0, 1.0], got {acceptance_threshold}"
+            )
+        self.acceptance_threshold = acceptance_threshold
+        self.judges = self._create_judges()
 
-    score: int = Field(ge=0, le=1, description="0=reject, 1=accept")
-    feedback: str = Field(description="Feedback and suggestions")
-
-
-class Critic(BaseAgent):
-    """Reviewer agent."""
-
-    def _get_system_prompt(self) -> str:
-        return """You are an expert ML reviewer.
-Evaluate data science solutions critically and provide constructive feedback.
-Use sequential thinking to assess quality thoroughly.
-
-Assess:
-1. Data preprocessing quality (based on Actor's report)
-2. Model selection and training approach
-3. Performance metrics adequacy
-4. Overall methodology and reasoning
-5. Completeness of the solution
-
-Return score: 1 (accept) or 0 (reject with detailed suggestions for improvement)"""
-
-    def _get_output_type(self) -> Type[BaseModel]:
-        return CriticEvaluation
-
-    def _get_mcp_tools(self) -> list[str]:
-        return ["sequential-thinking"]
+    def _create_judges(self) -> list[LLMJudge]:
+        return [
+            LLMJudge(
+                rubric="Evaluate the 'data_analysis' section: Is the data exploration thorough with proper analysis of features, distributions, and quality issues?",
+                include_input=True,
+                score={"include_reason": True},
+                assertion=False,
+            ),
+            LLMJudge(
+                rubric="Evaluate the 'preprocessing' section: Are preprocessing steps appropriate and well-documented (missing values, encoding, feature engineering)?",
+                include_input=True,
+                score={"include_reason": True},
+                assertion=False,
+            ),
+            LLMJudge(
+                rubric="Evaluate the 'model_training' section: Is model selection appropriate for the task type with clear rationale and hyperparameter choices?",
+                include_input=True,
+                score={"include_reason": True},
+                assertion=False,
+            ),
+            LLMJudge(
+                rubric="Evaluate the 'results' section and overall methodology: Are results clearly reported and does the approach follow ML best practices without data leakage?",
+                include_input=True,
+                score={"include_reason": True},
+                assertion=False,
+            ),
+        ]
 
     async def evaluate(
         self,
         solution: ActorSolution,
-        past_evaluations: Optional[list["CriticMemoryContext"]] = None,
+        train_path: Path,
+        test_path: Path,
+        target: str,
+        task_type: str,
+        past_evaluations: list[CriticMemoryContext] | None = None,
     ) -> CriticEvaluation:
-        """Evaluate solution quality."""
-        sections = [
-            "ACTOR'S REPORT:",
-            solution.report if solution.report else "No report provided",
-            "",
-            "RESULTS:",
-            f"- Predictions: {solution.predictions_path}",
-        ]
+        ctx = EvaluatorContext(
+            name="solution_evaluation",
+            inputs={
+                "train_path": str(train_path),
+                "test_path": str(test_path),
+                "target": target,
+                "task_type": task_type,
+            },
+            metadata=None,
+            expected_output=None,
+            output=solution,
+            duration=0.0,
+            _span_tree=SpanTreeRecordingError(""),
+            attributes={},
+            metrics={},
+        )
 
-        if past_evaluations:
-            sections.append(
-                f"\nPast evaluations: {encode([e.model_dump() for e in past_evaluations])}"
+        results = {}
+        for judge in self.judges:
+            result = await judge.evaluate(ctx)
+            if isinstance(result, dict):
+                results.update(result)
+            else:
+                judge_name = judge.rubric[:50]
+                results[judge_name] = result
+
+        return self._aggregate_results(results)
+
+    def _aggregate_results(self, results: dict) -> CriticEvaluation:
+        scores = []
+        feedback_parts = []
+
+        for eval_name, result in results.items():
+            if hasattr(result, "value") and isinstance(result.value, (int, float)):
+                scores.append(float(result.value))
+                feedback_parts.append(f"**{eval_name}**: {result.value:.2f} - {result.reason}")
+
+        avg_score = sum(scores) / len(scores) if scores else 0.0
+        accept = avg_score >= self.acceptance_threshold
+
+        if accept:
+            feedback = f"## Solution Accepted\n\nOverall score: {avg_score:.2f}\n\n" + "\n\n".join(
+                feedback_parts
+            )
+        else:
+            feedback = (
+                f"## Solution Needs Improvement\n\nOverall score: {avg_score:.2f}\n\n"
+                + "\n\n".join(feedback_parts)
             )
 
-        prompt = "\n".join(sections)
-        return await self._run_agent(prompt)
+        return CriticEvaluation(score=1 if accept else 0, feedback=feedback)

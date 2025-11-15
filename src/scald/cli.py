@@ -55,35 +55,46 @@ Examples:
 
     args = parser.parse_args()
 
-    if not args.train.exists():
-        logger.error(f"Train file not found: {args.train}")
-        sys.exit(1)
-    if not args.test.exists():
-        logger.error(f"Test file not found: {args.test}")
-        sys.exit(1)
+    logger.debug(f"CLI arguments parsed | args={vars(args)}")
 
-    logger.info("Starting Scald...")
-    logger.info(f"Train: {args.train}")
-    logger.info(f"Test: {args.test}")
-    logger.info(f"Target: {args.target}")
-    logger.info(f"Task type: {args.task_type}")
-    logger.info(f"Max iterations: {args.max_iterations}")
+    if not args.train.exists():
+        logger.error(f"Input validation failed | file=train | path={args.train} | error=not_found")
+        sys.exit(2)
+    if not args.test.exists():
+        logger.error(f"Input validation failed | file=test | path={args.test} | error=not_found")
+        sys.exit(2)
+
+    logger.info(
+        f"Scald CLI started | train={args.train} | test={args.test} | target={args.target} | "
+        f"task_type={args.task_type} | max_iterations={args.max_iterations}"
+    )
 
     try:
         scald = Scald(max_iterations=args.max_iterations)
         predictions = asyncio.run(
             scald.run(
-                train_path=args.train,
-                test_path=args.test,
+                train=args.train,
+                test=args.test,
                 target=args.target,
                 task_type=args.task_type,
             )
         )
-        logger.info(f"Completed successfully. Predictions shape: {predictions.shape}")
-        logger.info("Check workspace/artifacts/ for results")
 
+        logger.info(
+            f"Scald completed successfully | predictions_shape={predictions.shape} | "
+            f"predictions_count={len(predictions)} | predictions_dtype={predictions.dtype}"
+        )
+        logger.info("Results saved to workspace/artifacts/")
+        sys.exit(0)
+
+    except KeyboardInterrupt:
+        logger.warning("Execution interrupted by user | signal=SIGINT")
+        sys.exit(130)
     except Exception as e:
-        logger.error(f"Error: {e}")
+        logger.exception(
+            f"Scald execution failed | error_type={type(e).__name__} | "
+            f"task_type={args.task_type} | target={args.target}"
+        )
         sys.exit(1)
 
 
