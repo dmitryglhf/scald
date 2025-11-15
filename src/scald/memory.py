@@ -61,9 +61,11 @@ class MemoryManager:
             critic_eval_data = json.loads(metadata["critic_evaluation"])
             critic_evaluation = CriticEvaluation(**critic_eval_data)
 
+            critic_score = metadata.get("critic_score", critic_evaluation.score)
+
             actor_ctx = ActorMemoryContext(
                 iteration=metadata["iteration"],
-                accepted=metadata["critic_score"] == 1,
+                accepted=critic_score == 1,
                 actions_summary=document,
                 feedback_received=critic_evaluation.feedback,
             )
@@ -71,7 +73,7 @@ class MemoryManager:
 
             critic_ctx = CriticMemoryContext(
                 iteration=metadata["iteration"],
-                score=metadata["critic_score"],
+                score=critic_score,
                 actions_observed=document,
                 feedback_given=critic_evaluation.feedback,
             )

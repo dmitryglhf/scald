@@ -463,3 +463,40 @@ class TestUtilityMethodsContract:
         # Verify empty
         count_after = memory_manager.collection.count()
         assert count_after == 0
+
+    @pytest.mark.asyncio
+    async def test_retrieve_handles_missing_critic_score_field(
+        self, memory_manager, sample_actor_solution, sample_critic_evaluation
+    ):
+        """Contract: retrieve must handle legacy entries without critic_score field."""
+        # Save entry normally
+        memory_manager.save(
+            actor_solution=sample_actor_solution,
+            critic_evaluation=sample_critic_evaluation,
+            task_type="classification",
+            iteration=1,
+        )
+
+        # Manually corrupt metadata by removing critic_score (simulating legacy data)
+        result = memory_manager.collection.get(limit=1)
+        if result and result["ids"]:
+            entry_id = result["ids"][0]
+            metadata = result["metadatas"][0]
+            # Remove critic_score to simulate legacy data
+            metadata_without_score = {k: v for k, v in metadata.items() if k != "critic_score"}
+
+            memory_manager.collection.update(ids=[entry_id], metadatas=[metadata_without_score])
+
+        # Retrieve should still work, falling back to score from critic_evaluation JSON
+        actor_contexts, critic_contexts = memory_manager.retrieve(
+            actor_report=sample_actor_solution.report,
+            task_type="classification",
+            top_k=5,
+        )
+
+        # Should successfully retrieve and reconstruct score from critic_evaluation
+        assert len(actor_contexts) == 1
+        assert len(critic_contexts) == 1
+        assert isinstance(actor_contexts[0].accepted, bool)
+        assert isinstance(critic_contexts[0].score, int)
+        assert critic_contexts[0].score == sample_critic_evaluation.score
