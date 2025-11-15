@@ -45,18 +45,18 @@ class BenchmarkResult:
     actor_input_tokens: int
     actor_output_tokens: int
     actor_total_tokens: int
-    critic_input_tokens: int
-    critic_output_tokens: int
-    critic_total_tokens: int
+    # critic_input_tokens: int
+    # critic_output_tokens: int
+    # critic_total_tokens: int
     total_tokens: int
 
     # Cost breakdown
     actor_input_cost: float
     actor_output_cost: float
     actor_total_cost: float
-    critic_input_cost: float
-    critic_output_cost: float
-    critic_total_cost: float
+    # critic_input_cost: float
+    # critic_output_cost: float
+    # critic_total_cost: float
     total_cost: float
 
     # Timing
@@ -152,8 +152,8 @@ class AutoMLBenchmark:
             scald = Scald(max_iterations=self.max_iterations)
 
             y_pred = await scald.run(
-                train_path=train_path,
-                test_path=test_path,
+                train=train_path,
+                test=test_path,
                 target=target_col,
                 task_type="classification",
             )
@@ -180,10 +180,10 @@ class AutoMLBenchmark:
                     logger.warning(f"Could not calculate ROC AUC: {e}")
 
             actor_cost = scald.actor.cost
-            critic_cost = scald.critic.cost
+            # critic_cost = scald.critic.cost
 
-            total_tokens = scald.actor.total_tokens + scald.critic.total_tokens
-            total_cost = actor_cost.total_price + critic_cost.total_price
+            total_tokens = scald.actor.total_tokens  # + scald.critic.total_tokens
+            total_cost = actor_cost.total_price  # + critic_cost.total_price
 
             runtime = time.time() - start_time
 
@@ -206,16 +206,10 @@ class AutoMLBenchmark:
                 actor_input_tokens=scald.actor.input_tokens,
                 actor_output_tokens=scald.actor.output_tokens,
                 actor_total_tokens=scald.actor.total_tokens,
-                critic_input_tokens=scald.critic.input_tokens,
-                critic_output_tokens=scald.critic.output_tokens,
-                critic_total_tokens=scald.critic.total_tokens,
                 total_tokens=total_tokens,
                 actor_input_cost=actor_cost.input_price,
                 actor_output_cost=actor_cost.output_price,
                 actor_total_cost=actor_cost.total_price,
-                critic_input_cost=critic_cost.input_price,
-                critic_output_cost=critic_cost.output_price,
-                critic_total_cost=critic_cost.total_price,
                 total_cost=total_cost,
                 runtime_seconds=runtime,
                 status="success",
@@ -241,17 +235,17 @@ class AutoMLBenchmark:
                 f.write(
                     f"  Actor:  {scald.actor.total_tokens:,} (input: {scald.actor.input_tokens:,}, output: {scald.actor.output_tokens:,})\n"
                 )
-                f.write(
-                    f"  Critic: {scald.critic.total_tokens:,} (input: {scald.critic.input_tokens:,}, output: {scald.critic.output_tokens:,})\n"
-                )
+                # f.write(
+                # f"  Critic: {scald.critic.total_tokens:,} (input: {scald.critic.input_tokens:,}, output: {scald.critic.output_tokens:,})\n"
+                # )
                 f.write(f"  Total:  {total_tokens:,}\n")
                 f.write("\nCost:\n")
                 f.write(
                     f"  Actor:  ${actor_cost.total_price:.6f} (input: ${actor_cost.input_price:.6f}, output: ${actor_cost.output_price:.6f})\n"
                 )
-                f.write(
-                    f"  Critic: ${critic_cost.total_price:.6f} (input: ${critic_cost.input_price:.6f}, output: ${critic_cost.output_price:.6f})\n"
-                )
+                # f.write(
+                #     f"  Critic: ${critic_cost.total_price:.6f} (input: ${critic_cost.input_price:.6f}, output: ${critic_cost.output_price:.6f})\n"
+                # )
                 f.write(f"  Total:  ${total_cost:.6f}\n")
                 f.write(f"\nRuntime: {runtime:.2f}s\n")
 
@@ -290,16 +284,10 @@ class AutoMLBenchmark:
                 actor_input_tokens=0,
                 actor_output_tokens=0,
                 actor_total_tokens=0,
-                critic_input_tokens=0,
-                critic_output_tokens=0,
-                critic_total_tokens=0,
                 total_tokens=0,
                 actor_input_cost=0.0,
                 actor_output_cost=0.0,
                 actor_total_cost=0.0,
-                critic_input_cost=0.0,
-                critic_output_cost=0.0,
-                critic_total_cost=0.0,
                 total_cost=0.0,
                 runtime_seconds=runtime,
                 status="error",
@@ -369,7 +357,7 @@ class AutoMLBenchmark:
                 f.write("-" * 100 + "\n")
                 f.write(f"Total Tokens:    {sum(r.total_tokens for r in successful):,}\n")
                 f.write(f"Actor Tokens:    {sum(r.actor_total_tokens for r in successful):,}\n")
-                f.write(f"Critic Tokens:   {sum(r.critic_total_tokens for r in successful):,}\n")
+                # f.write(f"Critic Tokens:   {sum(r.critic_total_tokens for r in successful):,}\n")
                 f.write(
                     f"Avg Tokens/Task: {sum(r.total_tokens for r in successful) / len(successful):,.0f}\n\n"
                 )
@@ -379,7 +367,7 @@ class AutoMLBenchmark:
                 f.write("-" * 100 + "\n")
                 f.write(f"Total Cost:      ${sum(r.total_cost for r in successful):.6f}\n")
                 f.write(f"Actor Cost:      ${sum(r.actor_total_cost for r in successful):.6f}\n")
-                f.write(f"Critic Cost:     ${sum(r.critic_total_cost for r in successful):.6f}\n")
+                # f.write(f"Critic Cost:     ${sum(r.critic_total_cost for r in successful):.6f}\n")
                 f.write(
                     f"Avg Cost/Task:   ${sum(r.total_cost for r in successful) / len(successful):.6f}\n"
                 )
