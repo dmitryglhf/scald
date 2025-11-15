@@ -48,15 +48,29 @@ Run AutoML from the command line:
 scald --train data/train.csv --test data/test.csv --target price --task-type regression
 ```
 
-Or use the Python API for programmatic control:
+Or use the Python API:
 
 ```python
 from scald import Scald
+import polars as pl
 
 scald = Scald(max_iterations=5)
+
+# Option 1: Using CSV file paths
 predictions = await scald.run(
-    train_path="data/train.csv",
-    test_path="data/test.csv",
+    train="data/train.csv",
+    test="data/test.csv",
+    target="target_column",
+    task_type="classification",
+)
+
+# Option 2: Using DataFrames (Polars or Pandas)
+train_df = pl.read_csv("data/train.csv")
+test_df = pl.read_csv("data/test.csv")
+
+predictions = await scald.run(
+    train=train_df,
+    test=test_df,
     target="target_column",
     task_type="classification",
 )
