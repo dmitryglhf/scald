@@ -99,12 +99,26 @@ def save_json(data: Any, filename: str) -> Path:
 
     filepath = get_artifact_path(filename)
 
+    logger.debug(f"Attempting to save JSON | filename={filename} | type={type(data).__name__}")
+
     try:
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False, default=str)
-        logger.info(f"Saved JSON to {filepath}")
-    except Exception as e:
-        logger.error(f"Failed to save JSON to {filepath}: {e}")
+
+        file_size = filepath.stat().st_size
+        logger.info(
+            f"Saved JSON artifact | path={filepath} | size_bytes={file_size} | "
+            f"size_kb={file_size / 1024:.2f}"
+        )
+    except (IOError, OSError) as e:
+        logger.error(
+            f"Failed to save JSON | path={filepath} | error_type={type(e).__name__} | error={e}"
+        )
+        raise
+    except (TypeError, ValueError) as e:
+        logger.error(
+            f"JSON serialization failed | filename={filename} | error_type={type(e).__name__} | error={e}"
+        )
         raise
 
     return filepath
@@ -114,12 +128,22 @@ def save_text(content: str, filename: str) -> Path:
     """Save text content in session directory."""
     filepath = get_artifact_path(filename)
 
+    content_length = len(content)
+    logger.debug(f"Attempting to save text | filename={filename} | length={content_length}")
+
     try:
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(content)
-        logger.info(f"Saved text to {filepath}")
-    except Exception as e:
-        logger.error(f"Failed to save text to {filepath}: {e}")
+
+        file_size = filepath.stat().st_size
+        logger.info(
+            f"Saved text artifact | path={filepath} | size_bytes={file_size} | "
+            f"size_kb={file_size / 1024:.2f} | lines={content.count(chr(10)) + 1}"
+        )
+    except (IOError, OSError) as e:
+        logger.error(
+            f"Failed to save text | path={filepath} | error_type={type(e).__name__} | error={e}"
+        )
         raise
 
     return filepath

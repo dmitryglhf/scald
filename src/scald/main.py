@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 from typing import Literal
 
@@ -28,6 +29,11 @@ class Scald:
         self.critic = Critic(acceptance_threshold=acceptance_threshold)
         self.mm: MemoryManager = MemoryManager()
 
+        logger.debug(
+            f"Scald initialized | max_iterations={max_iterations} | "
+            f"acceptance_threshold={acceptance_threshold}"
+        )
+
     async def run(
         self,
         train: DatasetInput,
@@ -35,6 +41,12 @@ class Scald:
         target: str,
         task_type: TaskType,
     ) -> np.ndarray:
+        run_start_time = time.time()
+        logger.info(
+            f"Starting Scald run | task_type={task_type} | target={target} | "
+            f"max_iterations={self.max_iterations} | acceptance_threshold={self.acceptance_threshold}"
+        )
+
         workspace_train, workspace_test = prepare_datasets_for_workspace(train, test)
 
         actor_memory: list = []
@@ -44,8 +56,16 @@ class Scald:
 
         try:
             for iteration in range(1, self.max_iterations + 1):
-                logger.info(f"Iteration {iteration}/{self.max_iterations}")
+                iter_start_time = time.time()
+                logger.info(
+                    f"Iteration {iteration}/{self.max_iterations} started | task_type={task_type}"
+                )
 
+                logger.debug(
+                    f"Actor solving | iteration={iteration} | has_feedback={feedback is not None} | "
+                    f"past_experiences={len(actor_memory)}"
+                )
+                actor_start = time.time()
                 actor_solution = await self.actor.solve_task(
                     train_path=workspace_train,
                     test_path=workspace_test,
@@ -55,7 +75,14 @@ class Scald:
                     feedback=feedback,
                     past_experiences=actor_memory,
                 )
+                actor_duration = time.time() - actor_start
+                logger.info(
+                    f"Actor completed | iteration={iteration} | duration_sec={actor_duration:.2f} | "
+                    f"has_predictions={actor_solution.predictions_path is not None}"
+                )
 
+                logger.debug(f"Critic evaluating | iteration={iteration}")
+                critic_start = time.time()
                 critic_evaluation = await self.critic.evaluate(
                     solution=actor_solution,
                     train_path=workspace_train,
@@ -64,6 +91,11 @@ class Scald:
                     task_type=task_type,
                     past_evaluations=critic_memory,
                 )
+                critic_duration = time.time() - critic_start
+                logger.info(
+                    f"Critic completed | iteration={iteration} | duration_sec={critic_duration:.2f} | "
+                    f"score={critic_evaluation.score:.3f} | threshold={self.acceptance_threshold}"
+                )
 
                 entry_id = self.mm.save(
                     actor_solution=actor_solution,
@@ -71,37 +103,64 @@ class Scald:
                     task_type=task_type,
                     iteration=iteration,
                 )
-                logger.info(f"Saved iteration {iteration} to memory: {entry_id}")
+                logger.info(f"Memory saved | iteration={iteration} | entry_id={entry_id}")
 
                 actor_memory, critic_memory = self.mm.retrieve(
                     actor_report=actor_solution.report,
                     task_type=task_type,
                     top_k=5,
                 )
-                logger.info(f"Retrieved {len(actor_memory)} relevant experiences")
+                logger.info(
+                    f"Memory retrieved | iteration={iteration} | actor_entries={len(actor_memory)} | "
+                    f"critic_entries={len(critic_memory)}"
+                )
 
-                if critic_evaluation.score >= self.acceptance_threshold:
+                iter_duration = time.time() - iter_start_time
+                accepted = critic_evaluation.score >= self.acceptance_threshold
+                logger.info(
+                    f"=== Iteration {iteration} completed | duration_sec={iter_duration:.2f} | "
+                    f"score={critic_evaluation.score:.3f} | accepted={accepted} ==="
+                )
+
+                if accepted:
+                    total_duration = time.time() - run_start_time
                     logger.info(
-                        f"Solution accepted on iteration {iteration} "
-                        f"with score {critic_evaluation.score:.2f}"
+                        f"Solution ACCEPTED | iteration={iteration} | score={critic_evaluation.score:.3f} | "
+                        f"threshold={self.acceptance_threshold} | total_duration_sec={total_duration:.2f}"
                     )
                     saved_pred_path = save_workspace_artifacts(actor_solution)
                     return self._extract_predictions(saved_pred_path)
 
                 feedback = critic_evaluation.feedback
+                logger.debug(
+                    f"Feedback prepared for next iteration | iteration={iteration} | "
+                    f"feedback_length={len(feedback)}"
+                )
 
             if actor_solution is None:
-                raise ValueError("No iterations executed")
+                raise ValueError("No iterations executed - this should never happen")
 
+            total_duration = time.time() - run_start_time
             logger.warning(
-                f"Max iterations ({self.max_iterations}) reached without acceptance, "
-                f"returning last solution"
+                f"Max iterations reached | iterations={self.max_iterations} | "
+                f"final_score={critic_evaluation.score:.3f} | threshold={self.acceptance_threshold} | "
+                f"total_duration_sec={total_duration:.2f} | status=returning_last_solution"
             )
             saved_pred_path = save_workspace_artifacts(actor_solution)
             return self._extract_predictions(saved_pred_path)
 
+        except Exception as e:
+            logger.exception(
+                f"Scald run failed | task_type={task_type} | target={target} | "
+                f"error_type={type(e).__name__}"
+            )
+            raise
         finally:
+            cleanup_start = time.time()
             cleanup_workspace()
+            logger.debug(
+                f"Workspace cleanup completed | duration_sec={time.time() - cleanup_start:.2f}"
+            )
 
     def _extract_predictions(self, saved_pred_path: Path | None) -> np.ndarray:
         try:
