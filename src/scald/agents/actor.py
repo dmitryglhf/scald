@@ -1,49 +1,13 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, Optional, Type
+from typing import Literal
 
-from pydantic import BaseModel, Field
 from toon import encode
 
 from scald.agents.base import BaseAgent
-from scald.agents.context import ActorContext
-
-if TYPE_CHECKING:
-    from scald.memory.types import ActorMemoryContext
+from scald.agents.context import ActorContext, TaskContext
+from scald.models import ActorMemoryContext, ActorSolution
 
 TaskType = Literal["classification", "regression"]
-
-
-class ActorSolution(BaseModel):
-    predictions_path: Path = Field(
-        description="Absolute path to predictions CSV file (e.g., /home/user/.scald/actor/output/predictions.csv)"
-    )
-    data_analysis: str = Field(
-        default="",
-        description="Data exploration: dataset shape, features, target distribution, missing values, data quality issues",
-    )
-    preprocessing: str = Field(
-        default="",
-        description="Preprocessing steps: missing value handling, encoding, feature engineering, scaling",
-    )
-    model_training: str = Field(
-        default="",
-        description="Model selection rationale, hyperparameters, training approach, cross-validation strategy",
-    )
-    results: str = Field(
-        default="",
-        description="Training metrics, validation results, model performance, final predictions summary",
-    )
-
-    @property
-    def report(self) -> str:
-        return "\n\n".join(
-            [
-                f"# Data Analysis\n{self.data_analysis}",
-                f"# Preprocessing\n{self.preprocessing}",
-                f"# Model Training\n{self.model_training}",
-                f"# Results\n{self.results}",
-            ]
-        )
 
 
 class Actor(BaseAgent[ActorContext]):
@@ -78,7 +42,7 @@ OUTPUT REQUIREMENTS - Return ActorSolution with:
 - results: Performance metrics, validation results, predictions summary
 """
 
-    def _get_output_type(self) -> Type[BaseModel]:
+    def _get_output_type(self) -> type[ActorSolution]:
         return ActorSolution
 
     def _get_mcp_tools(self) -> list[str]:
@@ -97,11 +61,9 @@ OUTPUT REQUIREMENTS - Return ActorSolution with:
         target: str,
         task_type: TaskType,
         iteration: int = 1,
-        feedback: Optional[str] = None,
-        past_experiences: Optional[list["ActorMemoryContext"]] = None,
+        feedback: str | None = None,
+        past_experiences: list[ActorMemoryContext] | None = None,
     ) -> ActorSolution:
-        from scald.agents.context import TaskContext
-
         ctx = ActorContext(
             task=TaskContext(
                 train_path=Path(train_path),
@@ -111,7 +73,7 @@ OUTPUT REQUIREMENTS - Return ActorSolution with:
                 iteration=iteration,
             ),
             feedback=feedback,
-            past_experiences=past_experiences or [],
+            past_experiences=past_experiences if past_experiences is not None else [],
         )
 
         sections = [

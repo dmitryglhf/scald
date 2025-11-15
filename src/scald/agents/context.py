@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel
 
-if TYPE_CHECKING:
-    from scald.memory.types import ActorMemoryContext, CriticMemoryContext
+from scald.models import ActorMemoryContext, CriticMemoryContext
 
 TaskType = Literal["classification", "regression"]
 
@@ -21,10 +20,10 @@ class TaskContext(BaseModel):
 
 class ActorContext(BaseModel):
     task: TaskContext
-    feedback: Optional[str] = None
-    past_experiences: list["ActorMemoryContext"] = []
+    feedback: str | None = None
+    past_experiences: list[ActorMemoryContext] = []
 
 
 class CriticContext(BaseModel):
     task: TaskContext
-    past_evaluations: list["CriticMemoryContext"] = []
+    past_evaluations: list[CriticMemoryContext] = []

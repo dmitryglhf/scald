@@ -73,8 +73,8 @@ Examples:
         scald = Scald(max_iterations=args.max_iterations)
         predictions = asyncio.run(
             scald.run(
-                train_path=args.train,
-                test_path=args.test,
+                train=args.train,
+                test=args.test,
                 target=args.target,
                 task_type=args.task_type,
             )

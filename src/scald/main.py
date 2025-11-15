@@ -8,8 +8,9 @@ from scald.agents.actor import Actor
 from scald.agents.critic import Critic
 from scald.common.logger import get_logger
 from scald.common.workspace import (
+    DatasetInput,
     cleanup_workspace,
-    copy_datasets_to_workspace,
+    prepare_datasets_for_workspace,
     save_workspace_artifacts,
 )
 from scald.memory import MemoryManager
@@ -29,15 +30,12 @@ class Scald:
 
     async def run(
         self,
-        train_path: str | Path,
-        test_path: str | Path,
+        train: DatasetInput,
+        test: DatasetInput,
         target: str,
         task_type: TaskType,
     ) -> np.ndarray:
-        train_path = Path(train_path).expanduser().resolve()
-        test_path = Path(test_path).expanduser().resolve()
-
-        workspace_train, workspace_test = copy_datasets_to_workspace(train_path, test_path)
+        workspace_train, workspace_test = prepare_datasets_for_workspace(train, test)
 
         actor_memory: list = []
         critic_memory: list = []

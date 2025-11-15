@@ -1,19 +1,9 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
 
-from pydantic import BaseModel, Field
 from pydantic_evals.evaluators import EvaluatorContext, LLMJudge
 from pydantic_evals.otel._errors import SpanTreeRecordingError
 
-from scald.agents.actor import ActorSolution
-
-if TYPE_CHECKING:
-    from scald.memory.types import CriticMemoryContext
-
-
-class CriticEvaluation(BaseModel):
-    score: int = Field(ge=0, le=1, description="0=reject, 1=accept")
-    feedback: str = Field(description="Feedback and suggestions")
+from scald.models import ActorSolution, CriticEvaluation, CriticMemoryContext
 
 
 class Critic:
@@ -60,7 +50,7 @@ class Critic:
         test_path: Path,
         target: str,
         task_type: str,
-        past_evaluations: Optional[list["CriticMemoryContext"]] = None,
+        past_evaluations: list[CriticMemoryContext] | None = None,
     ) -> CriticEvaluation:
         ctx = EvaluatorContext(
             name="solution_evaluation",

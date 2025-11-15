@@ -1,9 +1,18 @@
 import shutil
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional, Union
+
+import polars as pl
 
 from scald.agents.actor import ActorSolution
 from scald.common.logger import get_logger, get_session_dir, save_text
+
+if TYPE_CHECKING:
+    import pandas as pd
+
+    DatasetInput = Union[str, Path, pl.DataFrame, pd.DataFrame]
+else:
+    DatasetInput = Union[str, Path, pl.DataFrame]
 
 logger = get_logger()
 
@@ -23,21 +32,42 @@ def create_workspace_directories() -> tuple[Path, Path, Path]:
     return data_dir, output_dir, workspace_dir
 
 
-def copy_datasets_to_workspace(train_path: Path, test_path: Path) -> tuple[Path, Path]:
-    """Copy user datasets to workspace data directory."""
+def prepare_datasets_for_workspace(
+    train: DatasetInput,
+    test: DatasetInput,
+) -> tuple[Path, Path]:
     data_dir, _, _ = create_workspace_directories()
 
-    workspace_train = data_dir / train_path.name
-    workspace_test = data_dir / test_path.name
+    workspace_train = _prepare_dataset(train, data_dir, "train.csv")
+    workspace_test = _prepare_dataset(test, data_dir, "test.csv")
 
-    shutil.copy2(train_path, workspace_train)
-    shutil.copy2(test_path, workspace_test)
-
-    logger.info("Copied datasets to workspace:")
+    logger.info("Prepared datasets in workspace:")
     logger.info(f"  Train: {workspace_train}")
     logger.info(f"  Test: {workspace_test}")
 
     return workspace_train, workspace_test
+
+
+def _prepare_dataset(data: DatasetInput, data_dir: Path, default_name: str) -> Path:
+    if isinstance(data, pl.DataFrame):
+        dest_path = data_dir / default_name
+        data.write_csv(dest_path)
+        logger.debug(f"Converted Polars DataFrame to CSV: {dest_path}")
+        return dest_path
+    elif hasattr(data, "to_csv") and hasattr(data, "columns"):
+        import pandas as pd
+
+        if isinstance(data, pd.DataFrame):
+            dest_path = data_dir / default_name
+            data.to_csv(dest_path, index=False)
+            logger.debug(f"Converted Pandas DataFrame to CSV: {dest_path}")
+            return dest_path
+
+    source_path = Path(data).expanduser().resolve()
+    dest_path = data_dir / source_path.name
+    shutil.copy2(source_path, dest_path)
+    logger.debug(f"Copied CSV file: {dest_path}")
+    return dest_path
 
 
 def save_workspace_artifacts(solution: ActorSolution) -> Optional[Path]:

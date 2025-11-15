@@ -7,7 +7,7 @@ import pytest
 from scald.agents.actor import ActorSolution
 from scald.agents.critic import CriticEvaluation
 from scald.memory import MemoryManager
-from scald.memory.types import ActorMemoryContext, CriticMemoryContext
+from scald.models import ActorMemoryContext, CriticMemoryContext
 
 
 @pytest.fixture

@@ -8,9 +8,9 @@ from scald.common.logger import get_session_dir, reset_logging, setup_logging
 from scald.common.workspace import (
     ACTOR_WORKSPACE,
     cleanup_workspace,
-    copy_datasets_to_workspace,
     create_workspace_directories,
     get_workspace_path,
+    prepare_datasets_for_workspace,
     save_workspace_artifacts,
 )
 
@@ -95,13 +95,10 @@ class TestWorkspaceDirectories:
 
 
 class TestDatasetCopying:
-    """Tests for copying datasets to workspace."""
-
-    def test_copy_datasets_to_workspace(self, sample_csv_files):
-        """Should copy both train and test files."""
+    def test_prepare_datasets_to_workspace(self, sample_csv_files):
         train_csv, test_csv = sample_csv_files
 
-        workspace_train, workspace_test = copy_datasets_to_workspace(train_csv, test_csv)
+        workspace_train, workspace_test = prepare_datasets_for_workspace(train_csv, test_csv)
 
         assert workspace_train.exists()
         assert workspace_test.exists()
@@ -111,23 +108,21 @@ class TestDatasetCopying:
         assert workspace_train.name == train_csv.name
         assert workspace_test.name == test_csv.name
 
-    def test_copy_datasets_preserves_content(self, sample_csv_files):
-        """Should preserve file content when copying."""
+    def test_prepare_datasets_preserves_content(self, sample_csv_files):
         train_csv, test_csv = sample_csv_files
         original_train_content = train_csv.read_text()
         original_test_content = test_csv.read_text()
 
-        workspace_train, workspace_test = copy_datasets_to_workspace(train_csv, test_csv)
+        workspace_train, workspace_test = prepare_datasets_for_workspace(train_csv, test_csv)
 
         assert workspace_train.read_text() == original_train_content
         assert workspace_test.read_text() == original_test_content
 
-    def test_copy_datasets_creates_directories(self, sample_csv_files):
-        """Should create workspace directories if they don't exist."""
+    def test_prepare_datasets_creates_directories(self, sample_csv_files):
         cleanup_workspace()
         train_csv, test_csv = sample_csv_files
 
-        workspace_train, workspace_test = copy_datasets_to_workspace(train_csv, test_csv)
+        workspace_train, workspace_test = prepare_datasets_for_workspace(train_csv, test_csv)
 
         assert workspace_train.exists()
         assert workspace_test.exists()

@@ -9,10 +9,8 @@ from chromadb import PersistentClient
 from chromadb.api.models.Collection import Collection
 from chromadb.utils.embedding_functions import JinaEmbeddingFunction
 
-from scald.agents.actor import ActorSolution
-from scald.agents.critic import CriticEvaluation
 from scald.common.logger import get_logger
-from scald.memory.types import ActorMemoryContext, CriticMemoryContext
+from scald.models import ActorMemoryContext, ActorSolution, CriticEvaluation, CriticMemoryContext
 
 TaskType = Literal["classification", "regression"]
 
