@@ -1,6 +1,6 @@
 import shutil
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastmcp import Context, FastMCP
 from pydantic import Field
@@ -82,7 +82,7 @@ async def list_files(
         str, Field(description="Glob pattern (e.g., '*.csv', 'train*.csv')")
     ] = "*.csv",
     recursive: Annotated[bool, Field(description="Search recursively in subdirectories")] = False,
-) -> dict:
+) -> dict[str, Any]:
     """List files in directory with optional glob pattern. Returns file paths, sizes, and modification times.
 
     List files in directory matching pattern."""
@@ -140,7 +140,7 @@ async def copy_file(
     source: Annotated[str, Field(description="Source file path")],
     destination: Annotated[str, Field(description="Destination file path")],
     ctx: Context,
-) -> dict:
+) -> dict[str, Any]:
     """Copy file from source to destination. Creates destination directory if needed.
 
     Copy file to new location."""
@@ -191,7 +191,7 @@ async def move_file(
     source: Annotated[str, Field(description="Source file path")],
     destination: Annotated[str, Field(description="Destination file path")],
     ctx: Context,
-) -> dict:
+) -> dict[str, Any]:
     """Move file from source to destination. Creates destination directory if needed.
 
     Move file to new location."""
@@ -243,7 +243,7 @@ async def move_file(
 async def delete_file(
     file_path: Annotated[str, Field(description="Path to file to delete")],
     ctx: Context,
-) -> dict:
+) -> dict[str, Any]:
     """Delete file. Use with caution - this operation cannot be undone.
 
     Delete file."""
@@ -287,7 +287,7 @@ async def delete_file(
 async def file_exists(
     path: Annotated[str, Field(description="Path to check")],
     ctx: Context,
-) -> dict:
+) -> dict[str, Any]:
     """Check if file or directory exists at given path.
 
     Check if file or directory exists."""
@@ -322,7 +322,7 @@ async def file_exists(
 async def get_file_info(
     file_path: Annotated[str, Field(description="Path to file")],
     ctx: Context,
-) -> dict:
+) -> dict[str, Any]:
     """Get detailed file metadata: size, modification time, permissions.
 
     Get file metadata."""
@@ -369,7 +369,7 @@ async def get_file_info(
 async def create_directory(
     directory: Annotated[str, Field(description="Directory path to create")],
     ctx: Context,
-) -> dict:
+) -> dict[str, Any]:
     """Create directory. Creates parent directories if needed.
 
     Create directory."""

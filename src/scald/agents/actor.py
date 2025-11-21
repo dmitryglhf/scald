@@ -1,11 +1,13 @@
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from toon import encode
 
 from scald.agents.base import BaseAgent
 from scald.agents.context import ActorContext, TaskContext
 from scald.models import ActorMemoryContext, ActorSolution
+
+__all__ = ["Actor", "ActorSolution", "TaskType"]
 
 TaskType = Literal["classification", "regression"]
 
@@ -92,4 +94,5 @@ OUTPUT REQUIREMENTS - Return ActorSolution with:
             )
 
         prompt = "\n".join(sections)
-        return await self._run_agent(prompt, deps=ctx)
+        result = await self._run_agent(prompt, deps=ctx)
+        return cast(ActorSolution, result)

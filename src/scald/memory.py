@@ -71,17 +71,17 @@ class MemoryManager:
         critic_contexts = []
 
         for i in range(results_count):
-            document = q_result["documents"][0][i]
-            metadata = q_result["metadatas"][0][i]
+            document = q_result["documents"][0][i]  # type: ignore[index]
+            metadata = q_result["metadatas"][0][i]  # type: ignore[index]
 
             try:
-                critic_eval_data = json.loads(metadata["critic_evaluation"])
+                critic_eval_data = json.loads(metadata["critic_evaluation"])  # type: ignore[arg-type]
                 critic_evaluation = CriticEvaluation(**critic_eval_data)
 
                 critic_score = metadata.get("critic_score", critic_evaluation.score)
 
                 actor_ctx = ActorMemoryContext(
-                    iteration=metadata["iteration"],
+                    iteration=metadata["iteration"],  # type: ignore[arg-type]
                     accepted=critic_score == 1,
                     actions_summary=document,
                     feedback_received=critic_evaluation.feedback,
@@ -89,8 +89,8 @@ class MemoryManager:
                 actor_contexts.append(actor_ctx)
 
                 critic_ctx = CriticMemoryContext(
-                    iteration=metadata["iteration"],
-                    score=critic_score,
+                    iteration=metadata["iteration"],  # type: ignore[arg-type]
+                    score=critic_score,  # type: ignore[arg-type]
                     actions_observed=document,
                     feedback_given=critic_evaluation.feedback,
                 )

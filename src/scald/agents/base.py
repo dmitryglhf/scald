@@ -69,7 +69,7 @@ class BaseAgent(UsageTrackingMixin, ABC, Generic[DepsT]):
 
         toolsets = get_mcp_toolsets(mcp_tools) if mcp_tools else []
 
-        return Agent[DepsT, Any](
+        return Agent(
             name=self.__class__.__name__,
             model=self._model,
             output_type=output_type,
@@ -85,7 +85,7 @@ class BaseAgent(UsageTrackingMixin, ABC, Generic[DepsT]):
         pass
 
     @abstractmethod
-    def _get_output_type(self) -> Type[BaseModel] | Type[dict] | Type[list]:
+    def _get_output_type(self) -> Type[BaseModel] | Type[dict[str, Any]] | Type[list[Any]]:
         """Returns output type for structured responses."""
         pass
 

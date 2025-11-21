@@ -1,9 +1,12 @@
 from pathlib import Path
+from typing import Any
 
 from pydantic_evals.evaluators import EvaluatorContext, LLMJudge
 from pydantic_evals.otel._errors import SpanTreeRecordingError
 
 from scald.models import ActorSolution, CriticEvaluation, CriticMemoryContext
+
+__all__ = ["Critic", "CriticEvaluation"]
 
 
 class Critic:
@@ -80,7 +83,7 @@ class Critic:
 
         return self._aggregate_results(results)
 
-    def _aggregate_results(self, results: dict) -> CriticEvaluation:
+    def _aggregate_results(self, results: dict[str, Any]) -> CriticEvaluation:
         scores = []
         feedback_parts = []
 

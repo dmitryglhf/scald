@@ -38,6 +38,7 @@ dev = [
     "pytest-asyncio",
     "pytest-cov",
     "coverage-badge>=1.1.2",
+    "prek>=0.2.18",
 ]
 docs = [
     "mkdocs",
@@ -64,6 +65,8 @@ strict = true
 disallow_incomplete_defs = false
 disallow_untyped_defs = false
 disallow_untyped_calls = false
+disallow_untyped_decorators = false
+warn_unused_ignores = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

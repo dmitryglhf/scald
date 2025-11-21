@@ -110,7 +110,7 @@ class TestCLIArguments:
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
-            assert exc_info.value.code == 1
+            assert exc_info.value.code == 2
 
     def test_test_file_not_found(self, sample_csv_files):
         train_csv, _ = sample_csv_files
@@ -131,7 +131,7 @@ class TestCLIArguments:
         ):
             with pytest.raises(SystemExit) as exc_info:
                 main()
-            assert exc_info.value.code == 1
+            assert exc_info.value.code == 2
 
 
 class TestCLIExecution:
@@ -163,7 +163,9 @@ class TestCLIExecution:
                 "classification",
             ],
         ):
-            main()
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 0
 
         mock_scald_class.assert_called_once_with(max_iterations=5)
         mock_asyncio_run.assert_called_once()
@@ -196,7 +198,9 @@ class TestCLIExecution:
                 "regression",
             ],
         ):
-            main()
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 0
 
         mock_scald_class.assert_called_once_with(max_iterations=5)
         mock_asyncio_run.assert_called_once()
@@ -229,7 +233,9 @@ class TestCLIExecution:
                 "10",
             ],
         ):
-            main()
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 0
 
         mock_scald_class.assert_called_once_with(max_iterations=10)
 

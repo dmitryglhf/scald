@@ -5,11 +5,11 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import openml
 import pandas as pd
-import yaml
+import yaml  # type: ignore[import-untyped]
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
@@ -95,7 +95,7 @@ class AutoMLBenchmark:
 
         logger.info(f"Loaded {len(self.tasks)} tasks from {config_path}")
 
-    async def run_single_task(self, task_config: dict) -> BenchmarkResult:
+    async def run_single_task(self, task_config: dict[str, Any]) -> BenchmarkResult:
         """Run benchmark on a single OpenML task."""
         task_name = task_config["name"]
         task_id = task_config["openml_task_id"]
@@ -120,7 +120,7 @@ class AutoMLBenchmark:
 
             # Get dataset info
             n_samples, n_features = X.shape
-            n_classes = len(y.unique()) if hasattr(y, "unique") else len(set(y))
+            n_classes = len(y.unique()) if hasattr(y, "unique") else len(set(y))  # type: ignore[union-attr, arg-type]
 
             logger.info(f"Dataset: {n_samples} samples, {n_features} features, {n_classes} classes")
 
@@ -131,6 +131,8 @@ class AutoMLBenchmark:
 
             # Get target column name
             target_col = dataset.default_target_attribute
+            if target_col is None:
+                raise ValueError(f"Dataset {dataset.name} has no default target attribute")
 
             # Save to CSV in task directory
             train_df = X_train.copy()

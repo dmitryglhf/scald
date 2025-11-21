@@ -10,14 +10,14 @@ from scald import Scald
 
 async def main():
     scald = Scald(max_iterations=5)
-    
+
     predictions = await scald.run(
         train_path="data/train.csv",
         test_path="data/test.csv",
         target="target_column",
         task_type="classification"
     )
-    
+
     print(f"Generated {len(predictions)} predictions")
 
 asyncio.run(main())
@@ -88,11 +88,11 @@ Process multiple datasets sequentially:
 async def process_batch(datasets):
     scald = Scald(max_iterations=5)
     results = {}
-    
+
     for name, config in datasets.items():
         predictions = await scald.run(**config)
         results[name] = predictions
-    
+
     return results
 
 datasets = {

@@ -21,7 +21,7 @@ class TestClass(UsageTrackingMixin):
 
     def set_usage(self, input_tokens: int, output_tokens: int):
         """Set usage data for testing."""
-        self._usage = MockUsage(input_tokens=input_tokens, output_tokens=output_tokens)
+        self._usage = MockUsage(input_tokens=input_tokens, output_tokens=output_tokens)  # type: ignore
 
 
 class TestCostBreakdown:
@@ -113,7 +113,7 @@ class TestUsageTrackingMixin:
 
         class NoModelClass(UsageTrackingMixin):
             def __init__(self):
-                self._usage = MockUsage(input_tokens=100, output_tokens=50)
+                self._usage = MockUsage(input_tokens=100, output_tokens=50)  # type: ignore
 
         obj = NoModelClass()
         cost = obj.cost
@@ -143,7 +143,7 @@ class TestUsageTrackingMixin:
             mock_price.output_price = 0.03
             mock_calc.return_value = mock_price
 
-            cost = obj.cost
+            _ = obj.cost
 
             # Verify calc_price was called with correct parameters
             mock_calc.assert_called_once()
@@ -161,7 +161,7 @@ class TestUsageTrackingMixin:
         class TestClassWithNull(UsageTrackingMixin):
             def __init__(self):
                 self.model = "test/model"
-                self._usage = NullTokensUsage()
+                self._usage = NullTokensUsage()  # type: ignore
 
         obj = TestClassWithNull()
         assert obj.input_tokens == 0

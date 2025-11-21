@@ -7,10 +7,10 @@ import optuna
 import polars as pl
 from catboost import CatBoostClassifier, CatBoostRegressor
 from fastmcp import Context, FastMCP
-from lightgbm import LGBMClassifier, LGBMRegressor  # type: ignore
+from lightgbm import LGBMClassifier, LGBMRegressor
 from pydantic import Field
 from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, r2_score, roc_auc_score
-from xgboost import XGBClassifier, XGBRegressor  # type: ignore
+from xgboost import XGBClassifier, XGBRegressor
 
 DESCRIPTION = """
 Machine learning MCP server.
@@ -66,7 +66,7 @@ async def train_catboost(
     ] = None,
     iterations: Annotated[int, Field(description="Number of boosting iterations")] = 100,
     learning_rate: Annotated[float, Field(description="Learning rate (0.0-1.0)")] = 0.1,
-) -> dict:
+) -> dict[str, Any]:
     """Train CatBoost model and generate predictions. Returns test_metrics and predictions_path."""
     try:
         if predictions_path and not test_path:
@@ -170,7 +170,7 @@ async def train_lightgbm(
     ] = None,
     num_iterations: Annotated[int, Field(description="Number of boosting iterations")] = 100,
     learning_rate: Annotated[float, Field(description="Learning rate (0.0-1.0)")] = 0.1,
-) -> dict:
+) -> dict[str, Any]:
     """Train LightGBM model and generate predictions. Returns test_metrics and predictions_path."""
     try:
         if predictions_path and not test_path:
@@ -280,7 +280,7 @@ async def train_xgboost(
     ] = None,
     n_estimators: Annotated[int, Field(description="Number of boosting estimators")] = 100,
     learning_rate: Annotated[float, Field(description="Learning rate (0.0-1.0)")] = 0.1,
-) -> dict:
+) -> dict[str, Any]:
     """Train XGBoost model and generate predictions. Returns test_metrics and predictions_path."""
     try:
         if predictions_path and not test_path:
@@ -383,7 +383,7 @@ async def ensemble_predictions(
         Optional[str], Field(description="Path to save ensemble predictions")
     ] = None,
     n_trials: Annotated[int, Field(description="Optuna trials")] = 100,
-) -> dict:
+) -> dict[str, Any]:
     """Ensemble predictions using Optuna for weight optimization.
 
     Ensemble multiple predictions with Optuna-optimized weights."""

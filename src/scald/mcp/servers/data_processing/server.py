@@ -32,7 +32,7 @@ async def encode_categorical_onehot(
     columns: Annotated[list[str], Field(description="Columns to encode")],
     output_path: Annotated[str, Field(description="Path to save encoded data")],
     ctx: Context,
-) -> dict:
+) -> dict[str, Any]:
     """Encode categorical features using one-hot encoding.
 
     One-hot encode categorical columns."""
@@ -67,7 +67,7 @@ async def encode_categorical_label(
     mappings_dir: Annotated[
         Optional[str], Field(description="Directory to save mapping files")
     ] = None,
-) -> dict:
+) -> dict[str, Any]:
     """Encode categorical features using label encoding.
 
     Label encode categorical columns.
@@ -134,7 +134,7 @@ async def decode_categorical_label(
         Field(description="Encoding mapping dict from encode_categorical_label"),
     ] = None,
     mapping_path: Annotated[Optional[str], Field(description="Path to mapping JSON file")] = None,
-) -> dict:
+) -> dict[str, Any]:
     """Decode label-encoded predictions back to original categories.
 
     Decode label-encoded column back to original categories.
@@ -163,6 +163,11 @@ async def decode_categorical_label(
             return {"success": False, "error": f"Column {column} not found"}
 
         # Invert the mapping: {0: 'category1', 1: 'category2', ...}
+        if mapping is None:
+            return {
+                "success": False,
+                "error": "Mapping is None",
+            }
         inverse_mapping = {v: k for k, v in mapping.items()}
 
         # Convert column to int first in case it's stored as float
@@ -190,7 +195,7 @@ async def handle_missing_values(
         Field(description="Missing value strategy"),
     ] = "drop",
     output_path: Annotated[Optional[str], Field(description="Path to save processed data")] = None,
-) -> dict:
+) -> dict[str, Any]:
     """Handle missing values.
 
     Handle missing values in dataset."""
@@ -213,7 +218,7 @@ async def handle_missing_values(
         elif strategy == "mode":
             for col in df.columns:
                 mode_result = df[col].mode()
-                if mode_result.height > 0:
+                if mode_result.height > 0:  # type: ignore[attr-defined]
                     mode_val = mode_result.first()
                     df = df.with_columns(pl.col(col).fill_null(mode_val))
                 else:
@@ -245,7 +250,7 @@ async def remove_outliers(
     ctx: Context,
     iqr_multiplier: Annotated[float, Field(description="IQR multiplier")] = 1.5,
     output_path: Annotated[Optional[str], Field(description="Path to save cleaned data")] = None,
-) -> dict:
+) -> dict[str, Any]:
     """Remove outliers using IQR method.
 
     Remove outliers from specified columns."""
@@ -259,9 +264,9 @@ async def remove_outliers(
 
             q1 = df[col].quantile(0.25)
             q3 = df[col].quantile(0.75)
-            iqr = q3 - q1
-            lower_bound = q1 - iqr_multiplier * iqr
-            upper_bound = q3 + iqr_multiplier * iqr
+            iqr = q3 - q1  # type: ignore[operator]
+            lower_bound = q1 - iqr_multiplier * iqr  # type: ignore[operator]
+            upper_bound = q3 + iqr_multiplier * iqr  # type: ignore[operator]
 
             df = df.filter((pl.col(col) >= lower_bound) & (pl.col(col) <= upper_bound))
 
@@ -289,7 +294,7 @@ async def scale_features(
         Literal["minmax", "standard"], Field(description="Scaling method")
     ] = "standard",
     output_path: Annotated[Optional[str], Field(description="Path to save scaled data")] = None,
-) -> dict:
+) -> dict[str, Any]:
     """Scale numerical features using standard or minmax scaling.
 
     Scale numerical features."""
@@ -313,7 +318,7 @@ async def scale_features(
                 if min_val == max_val:
                     await ctx.warning(f"Column {col} has constant value, skipping scaling")
                     continue
-                df = df.with_columns(((pl.col(col) - min_val) / (max_val - min_val)).alias(col))
+                df = df.with_columns(((pl.col(col) - min_val) / (max_val - min_val)).alias(col))  # type: ignore[operator]
             else:
                 return {"success": False, "error": f"Unknown method: {method}"}
 
@@ -340,7 +345,7 @@ async def train_test_split(
     train_path: Annotated[Optional[str], Field(description="Path to save train set")] = None,
     test_path: Annotated[Optional[str], Field(description="Path to save test set")] = None,
     random_seed: Annotated[int, Field(description="Random seed for reproducibility")] = 42,
-) -> dict:
+) -> dict[str, Any]:
     """Split dataset into train and test sets with stratified sampling.
 
     Split data into train and test sets."""

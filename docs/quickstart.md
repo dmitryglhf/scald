@@ -34,14 +34,14 @@ from scald import Scald
 
 async def main():
     scald = Scald(max_iterations=5)
-    
+
     predictions = await scald.run(
         train_path="data/train.csv",
         test_path="data/test.csv",
         target="target_column",
         task_type="classification"
     )
-    
+
     print(f"Generated {len(predictions)} predictions")
 
 asyncio.run(main())

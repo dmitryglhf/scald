@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated, Any, Optional
 
 import polars as pl
 from fastmcp import Context, FastMCP
@@ -86,7 +86,7 @@ async def preview_csv(
     n_rows: Annotated[
         int, Field(description="Number of rows to preview (must be > 0, default: 5)")
     ] = 5,
-) -> dict:
+) -> dict[str, Any]:
     """Preview first N rows of CSV file as list of dictionaries. Useful for examining actual data values and patterns.
 
     Preview first N rows of CSV file to examine actual data."""

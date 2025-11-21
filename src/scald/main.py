@@ -1,6 +1,6 @@
 import time
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 import polars as pl
@@ -49,8 +49,8 @@ class Scald:
 
         workspace_train, workspace_test = prepare_datasets_for_workspace(train, test)
 
-        actor_memory: list = []
-        critic_memory: list = []
+        actor_memory: list[Any] = []
+        critic_memory: list[Any] = []
         feedback: str | None = None
         actor_solution = None
 

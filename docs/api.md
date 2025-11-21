@@ -21,14 +21,14 @@ from scald import Scald
 
 async def main():
     scald = Scald(max_iterations=5)
-    
+
     predictions = await scald.run(
         train_path="train.csv",
         test_path="test.csv",
         target="price",
         task_type="regression"
     )
-    
+
     return predictions
 
 results = asyncio.run(main())
@@ -41,7 +41,7 @@ from typing import List
 
 class Scald:
     def __init__(self, max_iterations: int = 5) -> None: ...
-    
+
     async def run(
         self,
         train_path: str,

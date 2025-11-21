@@ -28,7 +28,7 @@ mcp = FastMCP("data-analysis", instructions=DESCRIPTION)
 async def get_feature_distributions(
     file_path: Annotated[str, Field(description="Path to CSV file")],
     ctx: Context,
-) -> dict:
+) -> dict[str, Any]:
     """Get distribution statistics for all features."""
     try:
         df = pl.read_csv(Path(file_path))
@@ -46,11 +46,11 @@ async def get_feature_distributions(
                     "dtype": dtype,
                     "count": df[col].count(),
                     "null_count": df[col].null_count(),
-                    "mean": float(df[col].mean()) if df[col].count() > 0 else None,
-                    "std": float(df[col].std()) if df[col].count() > 0 else None,
-                    "min": float(df[col].min()) if df[col].count() > 0 else None,
-                    "max": float(df[col].max()) if df[col].count() > 0 else None,
-                    "median": float(df[col].median()) if df[col].count() > 0 else None,
+                    "mean": float(df[col].mean()) if df[col].count() > 0 else None,  # type: ignore[arg-type]
+                    "std": float(df[col].std()) if df[col].count() > 0 else None,  # type: ignore[arg-type]
+                    "min": float(df[col].min()) if df[col].count() > 0 else None,  # type: ignore[arg-type]
+                    "max": float(df[col].max()) if df[col].count() > 0 else None,  # type: ignore[arg-type]
+                    "median": float(df[col].median()) if df[col].count() > 0 else None,  # type: ignore[arg-type]
                     "unique": df[col].n_unique(),
                 }
             else:
@@ -77,7 +77,7 @@ async def get_correlations(
     file_path: Annotated[str, Field(description="Path to CSV file")],
     ctx: Context,
     method: Annotated[Literal["pearson"], Field(description="Correlation method")] = "pearson",
-) -> dict:
+) -> dict[str, Any]:
     """Calculate correlation matrix."""
     try:
         df = pl.read_csv(Path(file_path))
@@ -92,7 +92,7 @@ async def get_correlations(
             return {"success": False, "error": "No numerical columns found"}
 
         numeric_df = df.select(numeric_cols)
-        corr_matrix = {}
+        corr_matrix: dict[str, dict[str, float | None]] = {}
 
         for col1 in numeric_cols:
             corr_matrix[col1] = {}
@@ -118,7 +118,7 @@ async def detect_outliers(
     iqr_multiplier: Annotated[
         float, Field(description="IQR multiplier for outlier detection (typically 1.5)")
     ] = 1.5,
-) -> dict:
+) -> dict[str, Any]:
     """Detect outliers in numerical columns."""
     try:
         df = pl.read_csv(Path(file_path))
@@ -140,9 +140,9 @@ async def detect_outliers(
         for col in numeric_cols:
             q1 = df[col].quantile(0.25)
             q3 = df[col].quantile(0.75)
-            iqr = q3 - q1
-            lower_bound = q1 - iqr_multiplier * iqr
-            upper_bound = q3 + iqr_multiplier * iqr
+            iqr = q3 - q1  # type: ignore[operator]
+            lower_bound = q1 - iqr_multiplier * iqr  # type: ignore[operator]
+            upper_bound = q3 + iqr_multiplier * iqr  # type: ignore[operator]
 
             outlier_count = df.filter((df[col] < lower_bound) | (df[col] > upper_bound)).height
             total_outliers += outlier_count
@@ -169,7 +169,7 @@ async def identify_feature_types(
     categorical_threshold: Annotated[
         int, Field(description="Max unique values to treat as categorical (must be > 0)")
     ] = 20,
-) -> dict:
+) -> dict[str, Any]:
     """Identify feature types automatically."""
     try:
         if categorical_threshold <= 0:
@@ -216,7 +216,7 @@ async def identify_feature_types(
 async def check_data_quality(
     file_path: Annotated[str, Field(description="Path to CSV file")],
     ctx: Context,
-) -> dict:
+) -> dict[str, Any]:
     """Check for data quality issues."""
     try:
         df = pl.read_csv(Path(file_path))
