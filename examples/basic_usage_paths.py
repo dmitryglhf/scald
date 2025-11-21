@@ -1,4 +1,5 @@
 import asyncio
+from pathlib import Path
 
 import polars as pl
 from sklearn.metrics import accuracy_score, classification_report
@@ -7,17 +8,20 @@ from scald.main import Scald
 
 
 async def main():
+    examples_dir = Path(__file__).parent
+    data_dir = examples_dir / "data"
+
     scald = Scald(max_iterations=5)
 
     y_pred = await scald.run(
-        train="examples/data/iris_train.csv",
-        test="examples/data/iris_test.csv",
+        train=str(data_dir / "iris_train.csv"),
+        test=str(data_dir / "iris_test.csv"),
         target="Species",
         task_type="classification",
     )
     print(y_pred)
 
-    val_df = pl.read_csv("examples/data/iris_val.csv")
+    val_df = pl.read_csv(data_dir / "iris_val.csv")
     y_true = val_df["Species"].to_numpy()
 
     accuracy = accuracy_score(y_true, y_pred)
