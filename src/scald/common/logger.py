@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import json
-import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
-from loguru import logger
+from logly import logger
 
 # Global state
 _session_dir: Optional[Path] = None
@@ -34,46 +33,23 @@ def setup_logging(
     _session_dir = base_log_dir / session_name
     _session_dir.mkdir(parents=True, exist_ok=True)
 
-    # Configure loguru
-    logger.remove()  # Remove default handler
-
-    # Configure custom colors for log levels
-    logger.level("INFO", color="<fg 92,120,226>")  # #5c78e2
-    logger.level("DEBUG", color="<fg 102,159,89>")  # #669f59
-
-    if enable_console:
-        logger.add(
-            sys.stderr,
-            format="<fg 141,182,212>[{time:MM/DD/YY HH:mm:ss}]</fg 141,182,212> <level>{level: <8}</level> <cyan>{name}:{line}</cyan> {message}",
-            level=log_level,
-            colorize=True,
-        )
-
     if enable_file:
         logger.add(
-            _session_dir / "scald.log",
-            format="[{time:MM/DD/YY HH:mm:ss}] {level: <8} {name}:{line} {message}",
-            level=log_level,
-            rotation="10 MB",
+            str(_session_dir / "scald.log"),
+            size_limit="10MB",
             retention=5,
-            compression="zip",
-            encoding="utf-8",
         )
 
     _initialized = True
 
 
 def reset_logging() -> None:
-    """Reset logging state to allow reconfiguration with new session directory."""
     global _session_dir, _initialized
-
-    logger.remove()  # Remove all handlers
     _session_dir = None
     _initialized = False
 
 
-def get_logger(name: Optional[str] = None) -> Any:
-    """Get loguru logger. Name parameter kept for API compatibility."""
+def get_logger() -> Any:
     if not _initialized:
         setup_logging()
     return logger

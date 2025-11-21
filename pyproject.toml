@@ -19,12 +19,12 @@ dependencies = [
     "lightgbm>=4.6.0",
     "catboost>=1.2.8",
     "polars>=1.35.1",
-    "loguru>=0.7.3",
     "fastmcp>=2.13.0.2",
     "scikit-learn>=1.7.2",
     "pydantic-ai>=1.10.0",
     "pydantic>=2.12.3",
     "pydantic-evals>=1.10.0",
+    "logly>=0.1.6",
 ]
 
 [project.scripts]

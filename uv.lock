@@ -1922,16 +1922,23 @@ wheels = [
 ]
 
 [[package]]
-name = "loguru"
-version = "0.7.3"
+name = "logly"
+version = "0.1.6"
 source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
-    { name = "win32-setctime", marker = "sys_platform == 'win32'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/3a/05/a1dae3dffd1116099471c643b8924f5aa6524411dc6c63fdae648c4f1aca/loguru-0.7.3.tar.gz", hash = "sha256:19480589e77d47b8d85b2c827ad95d49bf31b0dcde16593892eb51dd18706eb6", size = 63559, upload-time = "2024-12-06T11:20:56.608Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/90/f8/b114104ae622b9b973502e743161a2802335fb3af12d14e38d8045f6d230/logly-0.1.6.tar.gz", hash = "sha256:82dbc85b0aa1d82f32d32fffe12f727637bdf67d5d53cf3fa989a51b093d4367", size = 546862, upload-time = "2025-10-11T16:46:50.685Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0c/29/0348de65b8cc732daa3e33e67806420b2ae89bdce2b04af740289c5c6c8c/loguru-0.7.3-py3-none-any.whl", hash = "sha256:31a33c10c8e1e10422bfd431aeb5d351c7cf7fa671e3c4df004162264b28220c", size = 61595, upload-time = "2024-12-06T11:20:54.538Z" },
+    { url = "https://files.pythonhosted.org/packages/40/e1/b42d47e2de813df711933da4bf460a816256f0f580a532e8140f338baa4f/logly-0.1.6-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:4b1feca957d0d200cc430b9818b420f9b74bfada61549bae1dff34a2191d87b9", size = 1602160, upload-time = "2025-10-11T16:46:29.418Z" },
+    { url = "https://files.pythonhosted.org/packages/0b/bb/64633abb5f8708792f4372d6cc9d4f9afe28a38a8c5238108521f8237ee6/logly-0.1.6-cp311-cp311-manylinux_2_34_x86_64.whl", hash = "sha256:8fbb176018bcae0423e26116dd6c1dfad36e0529ee72962136420a0898da5af3", size = 1858347, upload-time = "2025-10-11T16:46:31.254Z" },
+    { url = "https://files.pythonhosted.org/packages/98/c6/6c4e16f8808f27ae0896b823c2dd1872e3ad7339b10bcae884343c958722/logly-0.1.6-cp311-cp311-win_amd64.whl", hash = "sha256:eb02f484c4cf7940aacba5f098ca8fe9db0ea7e8b0e9ab59501a0ebfde9dede5", size = 1689977, upload-time = "2025-10-11T16:46:32.69Z" },
+    { url = "https://files.pythonhosted.org/packages/35/7b/13112dedcb2a3d93c7d753db13b3fcfaeed46104583621b151a3fda77019/logly-0.1.6-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:f07e89b78e03f48e0c445d5565c982967c98e5616650abb4d05fd0698400ce1a", size = 1600962, upload-time = "2025-10-11T16:46:34.543Z" },
+    { url = "https://files.pythonhosted.org/packages/96/75/52f98bd9dcdc89506d94c75f3918e3d1374f78164122b54a9fe40ae14a09/logly-0.1.6-cp312-cp312-manylinux_2_34_x86_64.whl", hash = "sha256:0dfb118b3c028800b3eb40329ee5bcc9294317fbd4209304cd5a7186e6595839", size = 1857793, upload-time = "2025-10-11T16:46:35.944Z" },
+    { url = "https://files.pythonhosted.org/packages/84/0b/2be985049fbf7800340d200aadd11c1fc7a22b64fe4cc4251f182afad64a/logly-0.1.6-cp312-cp312-win_amd64.whl", hash = "sha256:2c92ddb3b90933d7eadfc0f8e3e573d131801cf0a112b3ae8130e44c8739504f", size = 1690390, upload-time = "2025-10-11T16:46:37.837Z" },
+    { url = "https://files.pythonhosted.org/packages/f1/e3/4ce60ebee3a34a00deeff00cbb3d3999e7b6f47d0acc4d7ca7d6b18ecf88/logly-0.1.6-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:3c15612a73b73df538f89e101e76815182c01b9b3e2804b5941c6c161664e447", size = 1600768, upload-time = "2025-10-11T16:46:39.262Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/46/c3453bd0d3346c6ecb3f9b549b8afbd7b88eed5d81cc58e254cc07676947/logly-0.1.6-cp313-cp313-manylinux_2_34_x86_64.whl", hash = "sha256:4112a176bff55ae056989274b7a9c42278607b6c750cb38a87bb03a2afef5571", size = 1857990, upload-time = "2025-10-11T16:46:40.769Z" },
+    { url = "https://files.pythonhosted.org/packages/3a/ae/5497dddf142291d31a4291c9c4a36f6e415c9ea6e22eddced0aa7440064f/logly-0.1.6-cp313-cp313-win_amd64.whl", hash = "sha256:109b1080d21ac45fadca5060bbcf60f810345318c95222918ec4ddc4823d2941", size = 1690451, upload-time = "2025-10-11T16:46:42.512Z" },
+    { url = "https://files.pythonhosted.org/packages/da/9c/bf44903b138afc9f3a44122638b229f04f2ccdb5e9d75a79cc71a31367a1/logly-0.1.6-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:9b396331b121e0edadcee96800e4ea062f325a1a8c12608acedfec361847491f", size = 1598959, upload-time = "2025-10-11T16:46:44.454Z" },
+    { url = "https://files.pythonhosted.org/packages/20/91/cb80b3ca0f0ff83c9c13b5eabab78a073cb1e192e54d082edb51363e6b5e/logly-0.1.6-cp314-cp314-manylinux_2_34_x86_64.whl", hash = "sha256:70cb0e50f51c5955c6679303794346c30ee497455a111c15ab077a9519eeb313", size = 1857146, upload-time = "2025-10-11T16:46:46.77Z" },
+    { url = "https://files.pythonhosted.org/packages/5c/6f/d6d4a77e2e48d25cbb0aa4ee6fd3f937b60f90afa3077906acc5360c46b9/logly-0.1.6-cp314-cp314-win_amd64.whl", hash = "sha256:39a2571e834ec6a7e181ff976a697683a962c991cc8705e5787270089faa3eb2", size = 1688812, upload-time = "2025-10-11T16:46:48.744Z" },
 ]
 
 [[package]]
@@ -4253,7 +4260,7 @@ dependencies = [
     { name = "fastmcp" },
     { name = "genai-prices" },
     { name = "lightgbm" },
-    { name = "loguru" },
+    { name = "logly" },
     { name = "optuna" },
     { name = "polars" },
     { name = "pydantic" },
@@ -4292,7 +4299,7 @@ requires-dist = [
     { name = "fastmcp", specifier = ">=2.13.0.2" },
     { name = "genai-prices", specifier = ">=0.0.35" },
     { name = "lightgbm", specifier = ">=4.6.0" },
-    { name = "loguru", specifier = ">=0.7.3" },
+    { name = "logly", specifier = ">=0.1.6" },
     { name = "optuna", specifier = ">=4.5.0" },
     { name = "polars", specifier = ">=1.35.1" },
     { name = "pydantic", specifier = ">=2.12.3" },
@@ -4999,15 +5006,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/86/eb/20b6cdf273913d0ad05a6a14aed4b9a85591c18a987a3d47f20fa13dcc47/websockets-15.0.1-cp313-cp313-win32.whl", hash = "sha256:ba9e56e8ceeeedb2e080147ba85ffcd5cd0711b89576b83784d8605a7df455fa", size = 176393, upload-time = "2025-03-05T20:02:53.814Z" },
     { url = "https://files.pythonhosted.org/packages/1b/6c/c65773d6cab416a64d191d6ee8a8b1c68a09970ea6909d16965d26bfed1e/websockets-15.0.1-cp313-cp313-win_amd64.whl", hash = "sha256:e09473f095a819042ecb2ab9465aee615bd9c2028e4ef7d933600a8401c79561", size = 176837, upload-time = "2025-03-05T20:02:55.237Z" },
     { url = "https://files.pythonhosted.org/packages/fa/a8/5b41e0da817d64113292ab1f8247140aac61cbf6cfd085d6a0fa77f4984f/websockets-15.0.1-py3-none-any.whl", hash = "sha256:f7a866fbc1e97b5c617ee4116daaa09b722101d4a3c170c787450ba409f9736f", size = 169743, upload-time = "2025-03-05T20:03:39.41Z" },
-]
-
-[[package]]
-name = "win32-setctime"
-version = "1.2.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/b3/8f/705086c9d734d3b663af0e9bb3d4de6578d08f46b1b101c2442fd9aecaa2/win32_setctime-1.2.0.tar.gz", hash = "sha256:ae1fdf948f5640aae05c511ade119313fb6a30d7eabe25fef9764dca5873c4c0", size = 4867, upload-time = "2024-12-07T15:28:28.314Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e1/07/c6fe3ad3e685340704d314d765b7912993bcb8dc198f0e7a89382d37974b/win32_setctime-1.2.0-py3-none-any.whl", hash = "sha256:95d644c4e708aba81dc3704a116d8cbc974d70b3bdb8be1d150e36be6e9d1390", size = 4083, upload-time = "2024-12-07T15:28:26.465Z" },
 ]
 
 [[package]]
