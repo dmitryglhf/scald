@@ -97,13 +97,19 @@ mkdocs serve
 
 ## Development
 
+Install development dependencies:
+
+```bash
+uv sync --group dev
+```
+
 Run tests and code quality checks:
 
 ```bash
-make test      # Run tests with
-make lint      # Check code quality
-make format    # Format code
-make help      # Show all commands
+just test      # Run tests
+just lint      # Check code quality
+just format    # Format code
+just --list    # Show all commands
 ```
 
 ## Requirements
