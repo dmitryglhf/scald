@@ -32,13 +32,13 @@ scald = "scald.cli:main"
 
 [dependency-groups]
 dev = [
-    "mypy",
-    "ruff",
-    "pytest",
-    "pytest-asyncio",
-    "pytest-cov",
-    "coverage-badge>=1.1.2",
     "prek>=0.2.18",
+    "ty>=0.0.1a27",
+    "mypy>=1.18.2",
+    "ruff>=0.14.2",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "pytest-cov>=7.0.0",
 ]
 docs = [
     "mkdocs",
@@ -71,7 +71,6 @@ warn_unused_ignores = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "-ra -q -W ignore --cov=src/scald --cov-report=term-missing --cov-report=html --cov-report=json"
 
 [tool.coverage.run]
 source = ["src/scald"]

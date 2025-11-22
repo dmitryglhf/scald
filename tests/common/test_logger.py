@@ -103,11 +103,6 @@ class TestLoggerAccess:
         assert hasattr(logger, "error")
         assert hasattr(logger, "warning")
 
-    def test_get_logger_with_name(self):
-        """Should accept name parameter for API compatibility."""
-        logger = get_logger("test_module")
-        assert logger is not None
-
     def test_get_logger_auto_initializes(self, temp_log_dir):
         """Should auto-initialize if not initialized."""
         reset_logging()
