@@ -128,46 +128,29 @@ async def decode_categorical_label(
     file_path: Annotated[str, Field(description="Path to CSV file with encoded predictions")],
     column: Annotated[str, Field(description="Column name to decode")],
     output_path: Annotated[str, Field(description="Path to save decoded data")],
+    mapping_path: Annotated[str, Field(description="Path to mapping JSON file")],
     ctx: Context,
-    mapping: Annotated[
-        Optional[dict[str, int]],
-        Field(description="Encoding mapping dict from encode_categorical_label"),
-    ] = None,
-    mapping_path: Annotated[Optional[str], Field(description="Path to mapping JSON file")] = None,
 ) -> dict[str, Any]:
     """Decode label-encoded predictions back to original categories.
 
     Decode label-encoded column back to original categories.
 
     Use this after making predictions to convert encoded integers back to original category names.
-    Provide either 'mapping' dict or 'mapping_path' to a saved JSON file.
+    Provide 'mapping_path' to the saved JSON file from encode_categorical_label.
     """
     try:
-        # Load mapping from file or use provided dict
-        if mapping_path:
-            if not Path(mapping_path).exists():
-                return {"success": False, "error": f"Mapping file not found: {mapping_path}"}
+        if not Path(mapping_path).exists():
+            return {"success": False, "error": f"Mapping file not found: {mapping_path}"}
 
-            with open(Path(mapping_path)) as f:
-                mapping = json.load(f)
-            await ctx.info(f"Loaded mapping from {mapping_path}")
-        elif mapping is None:
-            return {
-                "success": False,
-                "error": "Provide either 'mapping' dict or 'mapping_path' to JSON file",
-            }
+        with open(Path(mapping_path)) as f:
+            mapping = json.load(f)
+        await ctx.info(f"Loaded mapping from {mapping_path}")
 
         df = pl.read_csv(Path(file_path))
 
         if column not in df.columns:
             return {"success": False, "error": f"Column {column} not found"}
 
-        # Invert the mapping: {0: 'category1', 1: 'category2', ...}
-        if mapping is None:
-            return {
-                "success": False,
-                "error": "Mapping is None",
-            }
         inverse_mapping = {v: k for k, v in mapping.items()}
 
         # Convert column to int first in case it's stored as float

@@ -147,36 +147,76 @@ def save_workspace_artifacts(solution: ActorSolution) -> Optional[Path]:
 
     save_start = time.time()
     session_dir = get_session_dir()
-    output_dir = ACTOR_WORKSPACE / "output"
+    workspace_dir = ACTOR_WORKSPACE / "workspace"
 
-    saved_predictions_path = None
     artifacts_saved = 0
 
-    # Save predictions CSV
+    if not solution.predictions_path or not solution.predictions_path.exists():
+        logger.error(
+            f"Invalid predictions_path | path={solution.predictions_path} | "
+            f"exists={solution.predictions_path.exists() if solution.predictions_path else False}"
+        )
+        raise ValueError("Actor must provide valid predictions_path")
+
     try:
-        if solution.predictions_path and solution.predictions_path.exists():
-            predictions_filename = solution.predictions_path.name
-            dest_path = session_dir / predictions_filename
-            shutil.copy2(solution.predictions_path, dest_path)
-            saved_predictions_path = dest_path
+        predictions_dest = session_dir / "predictions.csv"
+        shutil.copy2(solution.predictions_path, predictions_dest)
+        file_size = predictions_dest.stat().st_size
+        artifacts_saved += 1
+        logger.info(
+            f"Saved final predictions | path={predictions_dest} | size_kb={file_size / 1024:.2f}"
+        )
+    except (IOError, OSError, shutil.Error) as e:
+        logger.error(
+            f"Failed to save predictions | source={solution.predictions_path} | "
+            f"error_type={type(e).__name__} | error={e}"
+        )
+        raise
+
+    try:
+        models_dir = session_dir / "models"
+        models_dir.mkdir(exist_ok=True)
+
+        for model_file in workspace_dir.glob("model_*"):
+            dest_path = models_dir / model_file.name
+            shutil.copy2(model_file, dest_path)
             file_size = dest_path.stat().st_size
             artifacts_saved += 1
-            logger.info(f"Saved predictions | path={dest_path} | size_kb={file_size / 1024:.2f}")
-        elif output_dir.exists():
-            for csv_file in output_dir.glob("*.csv"):
-                dest_path = session_dir / csv_file.name
-                shutil.copy2(csv_file, dest_path)
-                saved_predictions_path = dest_path
-                file_size = dest_path.stat().st_size
-                artifacts_saved += 1
-                logger.info(
-                    f"Saved output CSV | filename={csv_file.name} | path={dest_path} | "
-                    f"size_kb={file_size / 1024:.2f}"
-                )
-    except (IOError, OSError, shutil.Error) as e:
-        logger.error(f"Failed to save predictions | error_type={type(e).__name__} | error={e}")
+            logger.debug(
+                f"Saved model | filename={model_file.name} | size_kb={file_size / 1024:.2f}"
+            )
 
-    # Save actor report sections
+        model_count = len(list(models_dir.glob("model_*")))
+        if model_count > 0:
+            logger.info(f"Saved {model_count} model(s) | dir={models_dir}")
+    except (IOError, OSError, shutil.Error) as e:
+        logger.warning(
+            f"Failed to save models | workspace={workspace_dir} | "
+            f"error_type={type(e).__name__} | error={e}"
+        )
+
+    try:
+        all_predictions_dir = session_dir / "all_predictions"
+        all_predictions_dir.mkdir(exist_ok=True)
+
+        for pred_file in workspace_dir.glob("predictions_*"):
+            dest_path = all_predictions_dir / pred_file.name
+            shutil.copy2(pred_file, dest_path)
+            file_size = dest_path.stat().st_size
+            artifacts_saved += 1
+            logger.debug(
+                f"Saved prediction file | filename={pred_file.name} | size_kb={file_size / 1024:.2f}"
+            )
+
+        pred_count = len(list(all_predictions_dir.glob("predictions_*")))
+        if pred_count > 0:
+            logger.info(f"Saved {pred_count} prediction file(s) | dir={all_predictions_dir}")
+    except (IOError, OSError, shutil.Error) as e:
+        logger.warning(
+            f"Failed to save intermediate predictions | workspace={workspace_dir} | "
+            f"error_type={type(e).__name__} | error={e}"
+        )
+
     try:
         report_text = "\n\n".join(
             [
@@ -202,7 +242,7 @@ def save_workspace_artifacts(solution: ActorSolution) -> Optional[Path]:
         f"session_dir={session_dir} | duration_sec={save_duration:.3f}"
     )
 
-    return saved_predictions_path
+    return predictions_dest
 
 
 def cleanup_workspace():
