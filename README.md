@@ -14,7 +14,7 @@
 
 ## Overview
 
-Scald automates machine learning workflows through collaborative AI agents using the Actor-Critic pattern. The Actor agent explores data, engineers features, and trains models using six specialized MCP servers. The Critic agent evaluates solutions and provides targeted feedback for iterative refinement. This approach combines LLM-powered reasoning with gradient boosting algorithms (CatBoost, LightGBM, XGBoost) for both classification and regression tasks.
+Scald automates machine learning workflows through collaborative AI agents using the Actor-Critic pattern. The Actor agent explores data, engineers features, and trains models using five specialized MCP servers. The Critic agent evaluates solutions and provides targeted feedback for iterative refinement. This approach combines LLM-powered reasoning with gradient boosting algorithms (CatBoost, LightGBM, XGBoost) for both classification and regression tasks.
 
 The system learns from past experiences through ChromaDB-based memory, enabling transfer learning across datasets. Each iteration produces executable code artifacts, comprehensive logs, and cost tracking for full reproducibility.
 
