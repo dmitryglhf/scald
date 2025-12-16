@@ -1,3 +1,5 @@
+"""Example of using Scald to solve a Kaggle competition."""
+
 import asyncio
 from pathlib import Path
 
