@@ -14,14 +14,14 @@ async def main():
     scald = Scald(max_iterations=5)
 
     y_pred = await scald.run(
-        train=str(data_dir / "iris_train.csv"),
-        test=str(data_dir / "iris_test.csv"),
+        train=str(data_dir / "iris" / "iris_train.csv"),
+        test=str(data_dir / "iris" / "iris_test.csv"),
         target="Species",
         task_type="classification",
     )
     print(y_pred)
 
-    val_df = pl.read_csv(data_dir / "iris_val.csv")
+    val_df = pl.read_csv(data_dir / "iris" / "iris_val.csv")
     y_true = val_df["Species"].to_numpy()
 
     accuracy = accuracy_score(y_true, y_pred)
