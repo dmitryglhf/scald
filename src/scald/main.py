@@ -16,7 +16,7 @@ from scald.common.workspace import (
     prepare_datasets_for_workspace,
     save_workspace_artifacts,
 )
-from scald.graph import ActorNode, GraphDeps, RunState, solution_graph
+from scald.graph import GraphDeps, RunState, solution_graph
 from scald.memory import MemoryManager
 
 logger = get_logger()
@@ -71,8 +71,9 @@ class Scald:
         state = RunState()
 
         try:
-            result = await solution_graph.run(ActorNode(), state=state, deps=deps)
-            actor_solution = result.output
+            actor_solution = await solution_graph.run(
+                state=state, deps=deps, inputs=None
+            )
 
             logger.info(
                 f"Scald run finished | iterations={state.iteration} | "

@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
-from pydantic_graph import BaseNode, End, Graph, GraphRunContext
+from pydantic_graph import GraphBuilder, StepContext
 
 from scald.agents.actor import Actor
 from scald.agents.critic import Critic
@@ -48,102 +48,115 @@ class RunState:
 
 
 @dataclass
-class ActorNode(BaseNode[RunState, GraphDeps, ActorSolution]):
-    """Actor proposes a solution for the current iteration."""
-
-    async def run(self, ctx: GraphRunContext[RunState, GraphDeps]) -> CriticNode:
-        state, deps = ctx.state, ctx.deps
-        logger.info(
-            f"Iteration {state.iteration}/{deps.max_iterations} started | "
-            f"task_type={deps.task_type} | has_feedback={state.feedback is not None} | "
-            f"past_experiences={len(state.actor_memory)}"
-        )
-
-        started = time.time()
-        state.actor_solution = await deps.actor.solve_task(
-            train_path=deps.train_path,
-            test_path=deps.test_path,
-            target=deps.target,
-            task_type=deps.task_type,
-            iteration=state.iteration,
-            feedback=state.feedback,
-            past_experiences=state.actor_memory,
-        )
-        logger.info(
-            f"Actor completed | iteration={state.iteration} | "
-            f"duration_sec={time.time() - started:.2f} | "
-            f"cost_usd={deps.actor.cost.total_price:.4f}"
-        )
-        return CriticNode()
+class _Retry:
+    """Critic rejected and iterations remain — loop back to the actor."""
 
 
-@dataclass
-class CriticNode(BaseNode[RunState, GraphDeps, ActorSolution]):
-    """Critic scores the solution, then the FSM decides: accept, loop, or stop."""
-
-    async def run(
-        self, ctx: GraphRunContext[RunState, GraphDeps]
-    ) -> ActorNode | End[ActorSolution]:
-        state, deps = ctx.state, ctx.deps
-        assert state.actor_solution is not None  # set by ActorNode
-
-        started = time.time()
-        evaluation = await deps.critic.evaluate(
-            solution=state.actor_solution,
-            train_path=deps.train_path,
-            test_path=deps.test_path,
-            target=deps.target,
-            task_type=deps.task_type,
-            iteration=state.iteration,
-            past_evaluations=state.critic_memory,
-        )
-        accepted = evaluation.score >= deps.acceptance_threshold
-        state.score_history.append(evaluation.score)
-        logger.info(
-            f"Critic completed | iteration={state.iteration} | "
-            f"duration_sec={time.time() - started:.2f} | score={evaluation.score:.3f} | "
-            f"threshold={deps.acceptance_threshold} | accepted={accepted} | "
-            f"cost_usd={deps.critic.cost.total_price:.4f}"
-        )
-
-        deps.memory.save(
-            actor_solution=state.actor_solution,
-            critic_evaluation=evaluation,
-            task_type=deps.task_type,
-            iteration=state.iteration,
-            accepted=accepted,
-        )
-        state.actor_memory, state.critic_memory = deps.memory.retrieve(
-            actor_report=state.actor_solution.report,
-            task_type=deps.task_type,
-            top_k=5,
-        )
-
-        if accepted:
-            logger.info(
-                f"Solution ACCEPTED | iteration={state.iteration} | "
-                f"score={evaluation.score:.3f} | "
-                f"total_duration_sec={time.time() - state.started_at:.2f}"
-            )
-            return End(state.actor_solution)
-
-        if state.iteration >= deps.max_iterations:
-            logger.warning(
-                f"Max iterations reached | iterations={deps.max_iterations} | "
-                f"final_score={evaluation.score:.3f} | "
-                f"total_duration_sec={time.time() - state.started_at:.2f} | "
-                f"status=returning_last_solution"
-            )
-            return End(state.actor_solution)
-
-        state.iteration += 1
-        state.feedback = evaluation.feedback
-        return ActorNode()
-
-
-solution_graph: Graph[RunState, GraphDeps, ActorSolution] = Graph(
-    nodes=(ActorNode, CriticNode),
-    state_type=RunState,
-    run_end_type=ActorSolution,
+builder = GraphBuilder(
     name="scald_actor_critic",
+    state_type=RunState,
+    deps_type=GraphDeps,
+    input_type=type(None),
+    output_type=ActorSolution,
 )
+
+
+@builder.step
+async def actor_step(ctx: StepContext[RunState, GraphDeps, None]) -> None:
+    """Actor proposes a solution for the current iteration."""
+    state, deps = ctx.state, ctx.deps
+    logger.info(
+        f"Iteration {state.iteration}/{deps.max_iterations} started | "
+        f"task_type={deps.task_type} | has_feedback={state.feedback is not None} | "
+        f"past_experiences={len(state.actor_memory)}"
+    )
+
+    started = time.time()
+    state.actor_solution = await deps.actor.solve_task(
+        train_path=deps.train_path,
+        test_path=deps.test_path,
+        target=deps.target,
+        task_type=deps.task_type,
+        iteration=state.iteration,
+        feedback=state.feedback,
+        past_experiences=state.actor_memory,
+    )
+    logger.info(
+        f"Actor completed | iteration={state.iteration} | "
+        f"duration_sec={time.time() - started:.2f} | "
+        f"cost_usd={deps.actor.cost.total_price:.4f}"
+    )
+
+
+@builder.step
+async def critic_step(
+    ctx: StepContext[RunState, GraphDeps, None],
+) -> ActorSolution | _Retry:
+    """Critic scores the solution, then the FSM decides: accept, loop, or stop."""
+    state, deps = ctx.state, ctx.deps
+    assert state.actor_solution is not None  # set by actor_step
+
+    started = time.time()
+    evaluation = await deps.critic.evaluate(
+        solution=state.actor_solution,
+        train_path=deps.train_path,
+        test_path=deps.test_path,
+        target=deps.target,
+        task_type=deps.task_type,
+        iteration=state.iteration,
+        past_evaluations=state.critic_memory,
+    )
+    accepted = evaluation.score >= deps.acceptance_threshold
+    state.score_history.append(evaluation.score)
+    logger.info(
+        f"Critic completed | iteration={state.iteration} | "
+        f"duration_sec={time.time() - started:.2f} | score={evaluation.score:.3f} | "
+        f"threshold={deps.acceptance_threshold} | accepted={accepted} | "
+        f"cost_usd={deps.critic.cost.total_price:.4f}"
+    )
+
+    deps.memory.save(
+        actor_solution=state.actor_solution,
+        critic_evaluation=evaluation,
+        task_type=deps.task_type,
+        iteration=state.iteration,
+        accepted=accepted,
+    )
+    state.actor_memory, state.critic_memory = deps.memory.retrieve(
+        actor_report=state.actor_solution.report,
+        task_type=deps.task_type,
+        top_k=5,
+    )
+
+    if accepted:
+        logger.info(
+            f"Solution ACCEPTED | iteration={state.iteration} | "
+            f"score={evaluation.score:.3f} | "
+            f"total_duration_sec={time.time() - state.started_at:.2f}"
+        )
+        return state.actor_solution
+
+    if state.iteration >= deps.max_iterations:
+        logger.warning(
+            f"Max iterations reached | iterations={deps.max_iterations} | "
+            f"final_score={evaluation.score:.3f} | "
+            f"total_duration_sec={time.time() - state.started_at:.2f} | "
+            f"status=returning_last_solution"
+        )
+        return state.actor_solution
+
+    state.iteration += 1
+    state.feedback = evaluation.feedback
+    return _Retry()
+
+
+decision = (
+    builder.decision()
+    .branch(builder.match(ActorSolution).to(builder.end_node))
+    .branch(builder.match(_Retry).to(actor_step))
+)
+builder.add_edge(builder.start_node, actor_step)
+builder.add_edge(actor_step, critic_step)
+builder.add_edge(critic_step, decision)
+
+solution_graph = builder.build()
