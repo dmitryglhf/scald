@@ -6,6 +6,8 @@ import polars as pl
 from fastmcp import Context, FastMCP
 from pydantic import Field
 
+from scald.common.workspace import resolve_actor_workspace
+
 DESCRIPTION = """
 Data processing MCP server.
 
@@ -96,7 +98,7 @@ async def encode_categorical_label(
         # Save mappings to files
         if save_mappings:
             if mappings_dir is None:
-                mappings_dir = "/output/encodings"
+                mappings_dir = str(resolve_actor_workspace() / "output" / "encodings")
 
             mappings_path = Path(mappings_dir)
             mappings_path.mkdir(parents=True, exist_ok=True)
@@ -115,7 +117,10 @@ async def encode_categorical_label(
         return {
             "success": True,
             "output_path": output_path,
-            "mappings": {k: {str(key): val for key, val in v.items()} for k, v in mappings.items()},
+            "mappings": {
+                k: {str(key): val for key, val in v.items()}
+                for k, v in mappings.items()
+            },
             "mapping_paths": mapping_paths,
         }
 
@@ -125,7 +130,9 @@ async def encode_categorical_label(
 
 @mcp.tool
 async def decode_categorical_label(
-    file_path: Annotated[str, Field(description="Path to CSV file with encoded predictions")],
+    file_path: Annotated[
+        str, Field(description="Path to CSV file with encoded predictions")
+    ],
     column: Annotated[str, Field(description="Column name to decode")],
     output_path: Annotated[str, Field(description="Path to save decoded data")],
     mapping_path: Annotated[str, Field(description="Path to mapping JSON file")],
@@ -140,7 +147,10 @@ async def decode_categorical_label(
     """
     try:
         if not Path(mapping_path).exists():
-            return {"success": False, "error": f"Mapping file not found: {mapping_path}"}
+            return {
+                "success": False,
+                "error": f"Mapping file not found: {mapping_path}",
+            }
 
         with open(Path(mapping_path)) as f:
             mapping = json.load(f)
@@ -154,7 +164,9 @@ async def decode_categorical_label(
         inverse_mapping = {v: k for k, v in mapping.items()}
 
         # Convert column to int first in case it's stored as float
-        df = df.with_columns(pl.col(column).cast(pl.Int64).replace(inverse_mapping).alias(column))
+        df = df.with_columns(
+            pl.col(column).cast(pl.Int64).replace(inverse_mapping).alias(column)
+        )
 
         df.write_csv(Path(output_path))
 
@@ -177,7 +189,9 @@ async def handle_missing_values(
         Literal["drop", "mean", "median", "mode", "zero"],
         Field(description="Missing value strategy"),
     ] = "drop",
-    output_path: Annotated[Optional[str], Field(description="Path to save processed data")] = None,
+    output_path: Annotated[
+        Optional[str], Field(description="Path to save processed data")
+    ] = None,
 ) -> dict[str, Any]:
     """Handle missing values.
 
@@ -205,7 +219,9 @@ async def handle_missing_values(
                     mode_val = mode_result.first()
                     df = df.with_columns(pl.col(col).fill_null(mode_val))
                 else:
-                    await ctx.warning(f"Column {col} has no mode (all nulls?), skipping")
+                    await ctx.warning(
+                        f"Column {col} has no mode (all nulls?), skipping"
+                    )
         elif strategy == "zero":
             df = df.fill_null(0)
         else:
@@ -232,7 +248,9 @@ async def remove_outliers(
     columns: Annotated[list[str], Field(description="Columns to check for outliers")],
     ctx: Context,
     iqr_multiplier: Annotated[float, Field(description="IQR multiplier")] = 1.5,
-    output_path: Annotated[Optional[str], Field(description="Path to save cleaned data")] = None,
+    output_path: Annotated[
+        Optional[str], Field(description="Path to save cleaned data")
+    ] = None,
 ) -> dict[str, Any]:
     """Remove outliers using IQR method.
 
@@ -276,7 +294,9 @@ async def scale_features(
     method: Annotated[
         Literal["minmax", "standard"], Field(description="Scaling method")
     ] = "standard",
-    output_path: Annotated[Optional[str], Field(description="Path to save scaled data")] = None,
+    output_path: Annotated[
+        Optional[str], Field(description="Path to save scaled data")
+    ] = None,
 ) -> dict[str, Any]:
     """Scale numerical features using standard or minmax scaling.
 
@@ -299,9 +319,13 @@ async def scale_features(
                 min_val = df[col].min()
                 max_val = df[col].max()
                 if min_val == max_val:
-                    await ctx.warning(f"Column {col} has constant value, skipping scaling")
+                    await ctx.warning(
+                        f"Column {col} has constant value, skipping scaling"
+                    )
                     continue
-                df = df.with_columns(((pl.col(col) - min_val) / (max_val - min_val)).alias(col))  # type: ignore[operator]
+                df = df.with_columns(
+                    ((pl.col(col) - min_val) / (max_val - min_val)).alias(col)
+                )  # type: ignore[operator]
             else:
                 return {"success": False, "error": f"Unknown method: {method}"}
 
@@ -324,10 +348,18 @@ async def scale_features(
 async def train_test_split(
     file_path: Annotated[str, Field(description="Path to CSV file")],
     ctx: Context,
-    test_size: Annotated[float, Field(description="Test set proportion (0.0-1.0)")] = 0.2,
-    train_path: Annotated[Optional[str], Field(description="Path to save train set")] = None,
-    test_path: Annotated[Optional[str], Field(description="Path to save test set")] = None,
-    random_seed: Annotated[int, Field(description="Random seed for reproducibility")] = 42,
+    test_size: Annotated[
+        float, Field(description="Test set proportion (0.0-1.0)")
+    ] = 0.2,
+    train_path: Annotated[
+        Optional[str], Field(description="Path to save train set")
+    ] = None,
+    test_path: Annotated[
+        Optional[str], Field(description="Path to save test set")
+    ] = None,
+    random_seed: Annotated[
+        int, Field(description="Random seed for reproducibility")
+    ] = 42,
 ) -> dict[str, Any]:
     """Split dataset into train and test sets with stratified sampling.
 

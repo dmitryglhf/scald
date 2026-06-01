@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from dotenv import load_dotenv
 from pydantic_ai.mcp import MCPServerStdio
 
@@ -24,16 +26,24 @@ MCP_SERVERS: dict[str, MCPServerConfig] = {
         "@modelcontextprotocol/server-sequential-thinking", timeout=10
     ),
     # System Tools
-    "file_operations": python_server("file_operations/server.py", timeout=30, retries=3),
+    "file_operations": python_server(
+        "file_operations/server.py", timeout=30, retries=3
+    ),
     # Data Science Tools
     "data_preview": python_server("data_preview/server.py", timeout=30, retries=3),
     "data_analysis": python_server("data_analysis/server.py", timeout=30, retries=3),
-    "data_processing": python_server("data_processing/server.py", timeout=30, retries=3),
-    "machine_learning": python_server("machine_learning/server.py", timeout=60, retries=3),
+    "data_processing": python_server(
+        "data_processing/server.py", timeout=30, retries=3
+    ),
+    "machine_learning": python_server(
+        "machine_learning/server.py", timeout=60, retries=3
+    ),
 }
 
 
-def _create_single_toolset(name: str) -> MCPServerStdio:
+def _create_single_toolset(
+    name: str, workspace_dir: Path | None = None
+) -> MCPServerStdio:
     """Create a single MCP toolset from server name."""
     if name not in MCP_SERVERS:
         logger.error(f"Unknown MCP server requested: {name}")
@@ -43,18 +53,22 @@ def _create_single_toolset(name: str) -> MCPServerStdio:
 
     try:
         validate_server_config(name, config)
-        return create_mcp_server_stdio(name, config)
+        return create_mcp_server_stdio(name, config, workspace_dir)
     except ValueError as e:
         logger.error(f"Failed to create server '{name}': {e}")
         raise
 
 
-def get_mcp_toolsets(tool_names: list[str]) -> list[MCPServerStdio]:
-    """Create MCP toolsets from server names."""
-    return [_create_single_toolset(name) for name in tool_names]
+def get_mcp_toolsets(
+    tool_names: list[str], workspace_dir: Path | None = None
+) -> list[MCPServerStdio]:
+    """Create MCP toolsets from server names, scoped to ``workspace_dir`` if given."""
+    return [_create_single_toolset(name, workspace_dir) for name in tool_names]
 
 
-def get_server_descriptions(servers: dict[str, MCPServerConfig] | None = None) -> dict[str, str]:
+def get_server_descriptions(
+    servers: dict[str, MCPServerConfig] | None = None,
+) -> dict[str, str]:
     """Get server descriptions by importing DESCRIPTION from each server module."""
     if servers is None:
         servers = MCP_SERVERS

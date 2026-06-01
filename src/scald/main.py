@@ -1,4 +1,5 @@
 import time
+import uuid
 from pathlib import Path
 from typing import Literal
 
@@ -11,6 +12,7 @@ from scald.common.logger import get_logger
 from scald.common.workspace import (
     DatasetInput,
     cleanup_workspace,
+    default_workspace_root,
     prepare_datasets_for_workspace,
     save_workspace_artifacts,
 )
@@ -26,7 +28,7 @@ class Scald:
     def __init__(self, max_iterations: int = 5, acceptance_threshold: float = 0.75):
         self.max_iterations = max_iterations
         self.acceptance_threshold = acceptance_threshold
-        self.actor = Actor()
+        # Actor is built per run() so its MCP toolsets capture that run's workspace.
         self.critic = Critic(acceptance_threshold=acceptance_threshold)
         self.mm: MemoryManager = MemoryManager()
 
@@ -48,12 +50,17 @@ class Scald:
             f"max_iterations={self.max_iterations} | acceptance_threshold={self.acceptance_threshold}"
         )
 
-        workspace_train, workspace_test = prepare_datasets_for_workspace(train, test)
+        workspace = default_workspace_root() / uuid.uuid4().hex[:8]
+        actor = Actor(workspace_dir=workspace)
+        workspace_train, workspace_test = prepare_datasets_for_workspace(
+            train, test, workspace
+        )
 
         deps = GraphDeps(
-            actor=self.actor,
+            actor=actor,
             critic=self.critic,
             memory=self.mm,
+            workspace=workspace,
             train_path=workspace_train,
             test_path=workspace_test,
             target=target,
@@ -73,7 +80,7 @@ class Scald:
                 f"total_duration_sec={time.time() - run_start_time:.2f}"
             )
 
-            saved_pred_path = save_workspace_artifacts(actor_solution)
+            saved_pred_path = save_workspace_artifacts(actor_solution, workspace)
             return self._extract_predictions(saved_pred_path)
 
         except Exception as e:
@@ -84,7 +91,7 @@ class Scald:
             raise
         finally:
             cleanup_start = time.time()
-            cleanup_workspace()
+            cleanup_workspace(workspace)
             logger.debug(
                 f"Workspace cleanup completed | duration_sec={time.time() - cleanup_start:.2f}"
             )

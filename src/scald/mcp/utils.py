@@ -145,7 +145,9 @@ def get_server_description(module_path: str, server_name: str) -> str:
 def validate_script_path(script_path: Path, server_name: str) -> None:
     """Validate that script path exists."""
     if not script_path.exists():
-        raise ValueError(f"Server script not found: {script_path} for server '{server_name}'")
+        raise ValueError(
+            f"Server script not found: {script_path} for server '{server_name}'"
+        )
 
 
 def validate_server_config(name: str, config: MCPServerConfig) -> None:
@@ -163,12 +165,23 @@ def validate_server_config(name: str, config: MCPServerConfig) -> None:
         validate_script_path(script_path, name)
 
 
-def create_mcp_server_stdio(name: str, config: MCPServerConfig) -> MCPServerStdio:
-    """Create MCPServerStdio instance from config."""
+def create_mcp_server_stdio(
+    name: str, config: MCPServerConfig, workspace_dir: Path | None = None
+) -> MCPServerStdio:
+    """Create MCPServerStdio instance from config.
+
+    When ``workspace_dir`` is given, it is exported to the subprocess via
+    ``SCALD_WORKSPACE_DIR`` (baked into this server's env at construction, without
+    mutating the parent's global ``os.environ``) so concurrent runs stay isolated.
+    """
+    env = dict(os.environ.items())
+    if workspace_dir is not None:
+        env["SCALD_WORKSPACE_DIR"] = str(workspace_dir)
+
     return MCPServerStdio(
         config.command,
         args=list(config.args),
         timeout=config.timeout,
-        env=dict(os.environ.items()),
+        env=env,
         max_retries=config.retries,
     )

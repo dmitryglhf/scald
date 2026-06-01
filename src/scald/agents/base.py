@@ -1,5 +1,6 @@
 import os
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Any, Generic, Optional, Type, TypeVar
 
 from dotenv import load_dotenv
@@ -8,8 +9,8 @@ from pydantic_ai import Agent, ModelSettings, RunUsage
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
+from scald.common.cost import CostBreakdown
 from scald.common.logger import get_logger
-from scald.common.mixins import UsageTrackingMixin
 from scald.mcp.registry import get_mcp_toolsets
 
 load_dotenv()
@@ -24,7 +25,7 @@ DEFAULT_RETRIES = int(os.getenv("DEFAULT_RETRIES", 3))
 DepsT = TypeVar("DepsT")
 
 
-class BaseAgent(UsageTrackingMixin, ABC, Generic[DepsT]):
+class BaseAgent(ABC, Generic[DepsT]):
     """Base class for all agents with common initialization and configuration."""
 
     def __init__(
@@ -33,6 +34,7 @@ class BaseAgent(UsageTrackingMixin, ABC, Generic[DepsT]):
         temperature: float = DEFAULT_TEMPERATURE,
         timeout: int = DEFAULT_TIMEOUT,
         retries: int = DEFAULT_RETRIES,
+        workspace_dir: "Path | None" = None,
     ):
         if not 0.0 <= temperature <= 1.0:
             raise ValueError(f"Temperature must be in [0.0, 1.0], got {temperature}")
@@ -41,6 +43,7 @@ class BaseAgent(UsageTrackingMixin, ABC, Generic[DepsT]):
         self.temperature = temperature
         self.timeout = timeout
         self.retries = retries
+        self.workspace_dir = workspace_dir
 
         self._model = self._create_model()
         self.agent = self._create_agent()
@@ -67,7 +70,11 @@ class BaseAgent(UsageTrackingMixin, ABC, Generic[DepsT]):
         output_type = self._get_output_type()
         mcp_tools = self._get_mcp_tools()
 
-        toolsets = get_mcp_toolsets(mcp_tools) if mcp_tools else []
+        toolsets = (
+            get_mcp_toolsets(mcp_tools, workspace_dir=self.workspace_dir)
+            if mcp_tools
+            else []
+        )
 
         agent: Agent[DepsT, Any] = Agent(
             name=self.__class__.__name__,
@@ -107,3 +114,19 @@ class BaseAgent(UsageTrackingMixin, ABC, Generic[DepsT]):
         result = await self.agent.run(prompt, deps=deps)
         self._usage = result.usage()
         return result.output
+
+    @property
+    def input_tokens(self) -> int:
+        return self._usage.input_tokens or 0 if self._usage else 0
+
+    @property
+    def output_tokens(self) -> int:
+        return self._usage.output_tokens or 0 if self._usage else 0
+
+    @property
+    def total_tokens(self) -> int:
+        return self.input_tokens + self.output_tokens
+
+    @property
+    def cost(self) -> CostBreakdown:
+        return CostBreakdown.from_usage(self._usage, self.model)

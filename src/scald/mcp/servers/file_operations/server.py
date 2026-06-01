@@ -5,7 +5,7 @@ from typing import Annotated, Any
 from fastmcp import Context, FastMCP
 from pydantic import Field
 
-from scald.common.workspace import ACTOR_WORKSPACE
+from scald.common.workspace import resolve_actor_workspace
 
 DESCRIPTION = """
 File operations MCP server for CSV workflow management.
@@ -33,11 +33,13 @@ Use cases:
 
 mcp = FastMCP("file-operations", instructions=DESCRIPTION)
 
-# Security: Allowed directories for file operations
+# Security: Allowed directories for file operations.
+# Resolved at import time from SCALD_WORKSPACE_DIR (set by the parent per run).
+_workspace = resolve_actor_workspace()
 ALLOWED_DIRECTORIES = {
-    str(ACTOR_WORKSPACE / "data"),
-    str(ACTOR_WORKSPACE / "output"),
-    str(ACTOR_WORKSPACE / "workspace"),
+    str(_workspace / "data"),
+    str(_workspace / "output"),
+    str(_workspace / "workspace"),
     "/tmp",
 }
 
@@ -69,7 +71,10 @@ def is_path_allowed(path: str | Path) -> tuple[bool, str]:
         if resolved_path.is_relative_to(cwd):
             return True, path_str
 
-        return False, f"Access denied: Path must be in allowed directories: {ALLOWED_DIRECTORIES}"
+        return (
+            False,
+            f"Access denied: Path must be in allowed directories: {ALLOWED_DIRECTORIES}",
+        )
     except Exception as e:
         return False, f"Invalid path: {e}"
 
@@ -81,7 +86,9 @@ async def list_files(
     pattern: Annotated[
         str, Field(description="Glob pattern (e.g., '*.csv', 'train*.csv')")
     ] = "*.csv",
-    recursive: Annotated[bool, Field(description="Search recursively in subdirectories")] = False,
+    recursive: Annotated[
+        bool, Field(description="Search recursively in subdirectories")
+    ] = False,
 ) -> dict[str, Any]:
     """List files in directory with optional glob pattern. Returns file paths, sizes, and modification times.
 

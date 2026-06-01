@@ -11,10 +11,16 @@ from catboost import CatBoostClassifier, CatBoostRegressor
 from fastmcp import Context, FastMCP
 from lightgbm import LGBMClassifier, LGBMRegressor
 from pydantic import Field
-from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, r2_score, roc_auc_score
+from sklearn.metrics import (
+    accuracy_score,
+    f1_score,
+    mean_squared_error,
+    r2_score,
+    roc_auc_score,
+)
 from xgboost import XGBClassifier, XGBRegressor
 
-from scald.common.workspace import ACTOR_WORKSPACE
+from scald.common.workspace import resolve_actor_workspace
 
 DESCRIPTION = """
 Machine learning MCP server.
@@ -35,7 +41,9 @@ Features:
 mcp = FastMCP("machine-learning", instructions=DESCRIPTION)
 
 
-def _calculate_metrics(y_true: np.ndarray, y_pred: np.ndarray, task_type: str) -> dict[str, float]:
+def _calculate_metrics(
+    y_true: np.ndarray, y_pred: np.ndarray, task_type: str
+) -> dict[str, float]:
     metrics = {}
 
     if task_type == "classification":
@@ -64,7 +72,7 @@ def _generate_model_path(model_type: str) -> str:
     }
     ext = extensions.get(model_type, ".pkl")
 
-    workspace_dir = ACTOR_WORKSPACE / "workspace"
+    workspace_dir = resolve_actor_workspace() / "workspace"
     filename = f"model_{model_type}_{timestamp}_{unique_id}{ext}"
     return str(workspace_dir / filename)
 
@@ -73,7 +81,7 @@ def _generate_predictions_path(model_type: str) -> str:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     unique_id = str(uuid.uuid4())[:8]
 
-    workspace_dir = ACTOR_WORKSPACE / "workspace"
+    workspace_dir = resolve_actor_workspace() / "workspace"
     filename = f"predictions_{model_type}_{timestamp}_{unique_id}.csv"
     return str(workspace_dir / filename)
 
@@ -134,7 +142,9 @@ async def _train_model_generic(
             test_metrics = _calculate_metrics(y_test, test_pred, task_type)
             result["test_metrics"] = test_metrics
 
-            test_metrics_str = ", ".join([f"{k}={v:.4f}" for k, v in test_metrics.items()])
+            test_metrics_str = ", ".join(
+                [f"{k}={v:.4f}" for k, v in test_metrics.items()]
+            )
             await ctx.info(f"Test metrics: {test_metrics_str}")
         else:
             await ctx.info(
@@ -160,14 +170,24 @@ async def _train_model_generic(
 async def train_catboost(
     train_path: Annotated[str, Field(description="Path to train CSV file")],
     test_path: Annotated[str, Field(description="Path to test CSV file")],
-    target_column: Annotated[str, Field(description="Name of the target column in CSV")],
-    task_type: Annotated[Literal["classification", "regression"], Field(description="Task type")],
+    target_column: Annotated[
+        str, Field(description="Name of the target column in CSV")
+    ],
+    task_type: Annotated[
+        Literal["classification", "regression"], Field(description="Task type")
+    ],
     ctx: Context,
-    iterations: Annotated[int, Field(description="Number of boosting iterations")] = 100,
+    iterations: Annotated[
+        int, Field(description="Number of boosting iterations")
+    ] = 100,
     learning_rate: Annotated[float, Field(description="Learning rate (0.0-1.0)")] = 0.1,
     depth: Annotated[int | None, Field(description="Tree depth (1-16)")] = None,
-    l2_leaf_reg: Annotated[float | None, Field(description="L2 regularization coefficient")] = None,
-    subsample: Annotated[float | None, Field(description="Row sampling rate (0.0-1.0)")] = None,
+    l2_leaf_reg: Annotated[
+        float | None, Field(description="L2 regularization coefficient")
+    ] = None,
+    subsample: Annotated[
+        float | None, Field(description="Row sampling rate (0.0-1.0)")
+    ] = None,
     colsample_bylevel: Annotated[
         float | None, Field(description="Column sampling rate per level (0.0-1.0)")
     ] = None,
@@ -218,15 +238,27 @@ async def train_catboost(
 async def train_lightgbm(
     train_path: Annotated[str, Field(description="Path to train CSV file")],
     test_path: Annotated[str, Field(description="Path to test CSV file")],
-    target_column: Annotated[str, Field(description="Name of the target column in CSV")],
-    task_type: Annotated[Literal["classification", "regression"], Field(description="Task type")],
+    target_column: Annotated[
+        str, Field(description="Name of the target column in CSV")
+    ],
+    task_type: Annotated[
+        Literal["classification", "regression"], Field(description="Task type")
+    ],
     ctx: Context,
-    num_iterations: Annotated[int, Field(description="Number of boosting iterations")] = 100,
+    num_iterations: Annotated[
+        int, Field(description="Number of boosting iterations")
+    ] = 100,
     learning_rate: Annotated[float, Field(description="Learning rate (0.0-1.0)")] = 0.1,
     max_depth: Annotated[int | None, Field(description="Maximum tree depth")] = None,
-    reg_alpha: Annotated[float | None, Field(description="L1 regularization coefficient")] = None,
-    reg_lambda: Annotated[float | None, Field(description="L2 regularization coefficient")] = None,
-    subsample: Annotated[float | None, Field(description="Row sampling rate (0.0-1.0)")] = None,
+    reg_alpha: Annotated[
+        float | None, Field(description="L1 regularization coefficient")
+    ] = None,
+    reg_lambda: Annotated[
+        float | None, Field(description="L2 regularization coefficient")
+    ] = None,
+    subsample: Annotated[
+        float | None, Field(description="Row sampling rate (0.0-1.0)")
+    ] = None,
     colsample_bytree: Annotated[
         float | None, Field(description="Column sampling rate (0.0-1.0)")
     ] = None,
@@ -278,15 +310,27 @@ async def train_lightgbm(
 async def train_xgboost(
     train_path: Annotated[str, Field(description="Path to train CSV file")],
     test_path: Annotated[str, Field(description="Path to test CSV file")],
-    target_column: Annotated[str, Field(description="Name of the target column in CSV")],
-    task_type: Annotated[Literal["classification", "regression"], Field(description="Task type")],
+    target_column: Annotated[
+        str, Field(description="Name of the target column in CSV")
+    ],
+    task_type: Annotated[
+        Literal["classification", "regression"], Field(description="Task type")
+    ],
     ctx: Context,
-    n_estimators: Annotated[int, Field(description="Number of boosting estimators")] = 100,
+    n_estimators: Annotated[
+        int, Field(description="Number of boosting estimators")
+    ] = 100,
     learning_rate: Annotated[float, Field(description="Learning rate (0.0-1.0)")] = 0.1,
     max_depth: Annotated[int | None, Field(description="Maximum tree depth")] = None,
-    reg_alpha: Annotated[float | None, Field(description="L1 regularization coefficient")] = None,
-    reg_lambda: Annotated[float | None, Field(description="L2 regularization coefficient")] = None,
-    subsample: Annotated[float | None, Field(description="Row sampling rate (0.0-1.0)")] = None,
+    reg_alpha: Annotated[
+        float | None, Field(description="L1 regularization coefficient")
+    ] = None,
+    reg_lambda: Annotated[
+        float | None, Field(description="L2 regularization coefficient")
+    ] = None,
+    subsample: Annotated[
+        float | None, Field(description="Row sampling rate (0.0-1.0)")
+    ] = None,
     colsample_bytree: Annotated[
         float | None, Field(description="Column sampling rate (0.0-1.0)")
     ] = None,
@@ -335,16 +379,22 @@ async def train_xgboost(
 
 @mcp.tool
 async def ensemble_predictions(
-    predictions_paths: Annotated[list[str], Field(description="Paths to prediction CSVs")],
+    predictions_paths: Annotated[
+        list[str], Field(description="Paths to prediction CSVs")
+    ],
     true_labels_path: Annotated[str, Field(description="Path to true labels CSV")],
     target_column: Annotated[str, Field(description="Target column name")],
-    task_type: Annotated[Literal["classification", "regression"], Field(description="Task type")],
+    task_type: Annotated[
+        Literal["classification", "regression"], Field(description="Task type")
+    ],
     ctx: Context,
     n_trials: Annotated[int, Field(description="Optuna trials")] = 100,
 ) -> dict[str, Any]:
     """Ensemble predictions using Optuna for weight optimization. Returns optimized predictions_path."""
     try:
-        await ctx.info(f"Loading {len(predictions_paths)} prediction files for ensemble")
+        await ctx.info(
+            f"Loading {len(predictions_paths)} prediction files for ensemble"
+        )
 
         predictions_list = []
         for i, pred_path in enumerate(predictions_paths):
@@ -363,14 +413,17 @@ async def ensemble_predictions(
 
         def objective(trial: optuna.Trial) -> float:
             weights = [
-                trial.suggest_float(f"weight_{i}", 0.0, 1.0) for i in range(len(predictions_list))
+                trial.suggest_float(f"weight_{i}", 0.0, 1.0)
+                for i in range(len(predictions_list))
             ]
             total = sum(weights)
             if total == 0:
                 return float("inf")
 
             weights = [w / total for w in weights]
-            ensemble_pred = np.sum([w * pred for w, pred in zip(weights, predictions_list)], axis=0)
+            ensemble_pred = np.sum(
+                [w * pred for w, pred in zip(weights, predictions_list)], axis=0
+            )
 
             if task_type == "classification":
                 ensemble_pred_binary = (ensemble_pred > 0.5).astype(int)
@@ -381,11 +434,15 @@ async def ensemble_predictions(
         study = optuna.create_study(direction="minimize")
         study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
 
-        best_weights = [study.best_params[f"weight_{i}"] for i in range(len(predictions_list))]
+        best_weights = [
+            study.best_params[f"weight_{i}"] for i in range(len(predictions_list))
+        ]
         total = sum(best_weights)
         best_weights = [w / total for w in best_weights]
 
-        weights_str = ", ".join([f"model_{i + 1}={w:.4f}" for i, w in enumerate(best_weights)])
+        weights_str = ", ".join(
+            [f"model_{i + 1}={w:.4f}" for i, w in enumerate(best_weights)]
+        )
         await ctx.info(f"Optimized weights: {weights_str}")
 
         ensemble_pred = np.sum(

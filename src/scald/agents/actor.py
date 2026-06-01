@@ -30,7 +30,7 @@ WORKFLOW:
 CRITICAL - Categorical Encoding:
 If you encode target column, you MUST DECODE predictions before returning:
 - Target in test dataset is ALWAYS empty column
-- encode_categorical_label saves mapping to /output/encodings/{column}_mapping.json
+- encode_categorical_label returns the saved mapping file path in its result; reuse it
 - After training, decode predictions: decode_categorical_label(column="prediction", mapping_path="...")
 - Return decoded values (original labels, not integers)
 
@@ -75,6 +75,12 @@ Use predictions_path from best performing model: ActorSolution(predictions_path=
                 f"- Test Dataset CSV: {task.test_path}",
                 f"- Target column: {task.target}",
             ]
+
+            if self.workspace_dir is not None:
+                sections.append(
+                    f"- Write all intermediate files (encoded CSVs, mappings) under "
+                    f"this workspace: {self.workspace_dir}"
+                )
 
             if ctx.deps.feedback:
                 sections.append(

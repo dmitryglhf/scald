@@ -1,12 +1,15 @@
+import os
 import shutil
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Union
 
 import polars as pl
+from platformdirs import user_cache_dir
 
 from scald.agents.actor import ActorSolution
-from scald.common.logger import get_logger, get_session_dir, save_text
+from scald.common.logger import get_logger
+from scald.common.session import get_session_dir, save_text
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -17,16 +20,35 @@ else:
 
 logger = get_logger()
 
-ACTOR_WORKSPACE = Path.home() / ".scald" / "actor"
+# Env var by which the parent process tells MCP server subprocesses which per-run
+# workspace to use. Set per-server in create_mcp_server_stdio (not in global os.environ).
+WORKSPACE_ENV_VAR = "SCALD_WORKSPACE_DIR"
 
 
-def create_workspace_directories() -> tuple[Path, Path, Path]:
-    """Create isolated workspace directories."""
-    logger.debug(f"Creating workspace directories | root={ACTOR_WORKSPACE}")
+def default_workspace_root() -> Path:
+    """OS-correct base for ephemeral actor workspaces (cache dir, since it is rmtree'd)."""
+    return Path(user_cache_dir("scald"))
 
-    data_dir = ACTOR_WORKSPACE / "data"
-    output_dir = ACTOR_WORKSPACE / "output"
-    workspace_dir = ACTOR_WORKSPACE / "workspace"
+
+def resolve_actor_workspace() -> Path:
+    """The actor workspace as seen from inside an MCP server subprocess.
+
+    Reads ``SCALD_WORKSPACE_DIR`` (set by the parent per run); falls back to a
+    stable default for standalone/dev use of a server.
+    """
+    env_value = os.environ.get(WORKSPACE_ENV_VAR)
+    if env_value:
+        return Path(env_value)
+    return default_workspace_root() / "actor"
+
+
+def create_workspace_directories(workspace: Path) -> tuple[Path, Path, Path]:
+    """Create isolated workspace directories under ``workspace``."""
+    logger.debug(f"Creating workspace directories | root={workspace}")
+
+    data_dir = workspace / "data"
+    output_dir = workspace / "output"
+    workspace_dir = workspace / "workspace"
 
     try:
         for directory in [data_dir, output_dir, workspace_dir]:
@@ -38,7 +60,7 @@ def create_workspace_directories() -> tuple[Path, Path, Path]:
         )
     except (OSError, PermissionError) as e:
         logger.error(
-            f"Failed to create workspace directories | root={ACTOR_WORKSPACE} | "
+            f"Failed to create workspace directories | root={workspace} | "
             f"error_type={type(e).__name__} | error={e}"
         )
         raise
@@ -49,6 +71,7 @@ def create_workspace_directories() -> tuple[Path, Path, Path]:
 def prepare_datasets_for_workspace(
     train: DatasetInput,
     test: DatasetInput,
+    workspace: Path,
 ) -> tuple[Path, Path]:
     logger.debug(
         f"Preparing datasets for workspace | train_type={type(train).__name__} | "
@@ -56,7 +79,7 @@ def prepare_datasets_for_workspace(
     )
 
     prep_start = time.time()
-    data_dir, _, _ = create_workspace_directories()
+    data_dir, _, _ = create_workspace_directories(workspace)
 
     workspace_train = _prepare_dataset(train, data_dir, "train.csv")
     workspace_test = _prepare_dataset(test, data_dir, "test.csv")
@@ -76,7 +99,9 @@ def prepare_datasets_for_workspace(
 
 
 def _prepare_dataset(data: DatasetInput, data_dir: Path, default_name: str) -> Path:
-    logger.debug(f"Preparing dataset | type={type(data).__name__} | default_name={default_name}")
+    logger.debug(
+        f"Preparing dataset | type={type(data).__name__} | default_name={default_name}"
+    )
 
     prep_start = time.time()
 
@@ -141,13 +166,15 @@ def _prepare_dataset(data: DatasetInput, data_dir: Path, default_name: str) -> P
         raise
 
 
-def save_workspace_artifacts(solution: ActorSolution) -> Optional[Path]:
+def save_workspace_artifacts(
+    solution: ActorSolution, workspace: Path
+) -> Optional[Path]:
     """Save workspace artifacts to session log directory."""
     logger.debug("Saving workspace artifacts to session directory")
 
     save_start = time.time()
     session_dir = get_session_dir()
-    workspace_dir = ACTOR_WORKSPACE / "workspace"
+    workspace_dir = workspace / "workspace"
 
     artifacts_saved = 0
 
@@ -210,7 +237,9 @@ def save_workspace_artifacts(solution: ActorSolution) -> Optional[Path]:
 
         pred_count = len(list(all_predictions_dir.glob("predictions_*")))
         if pred_count > 0:
-            logger.info(f"Saved {pred_count} prediction file(s) | dir={all_predictions_dir}")
+            logger.info(
+                f"Saved {pred_count} prediction file(s) | dir={all_predictions_dir}"
+            )
     except (IOError, OSError, shutil.Error) as e:
         logger.warning(
             f"Failed to save intermediate predictions | workspace={workspace_dir} | "
@@ -234,7 +263,9 @@ def save_workspace_artifacts(solution: ActorSolution) -> Optional[Path]:
                 f"Saved actor report | path={report_path} | size_kb={report_size / 1024:.2f}"
             )
     except Exception as e:
-        logger.error(f"Failed to save actor report | error_type={type(e).__name__} | error={e}")
+        logger.error(
+            f"Failed to save actor report | error_type={type(e).__name__} | error={e}"
+        )
 
     save_duration = time.time() - save_start
     logger.info(
@@ -245,27 +276,22 @@ def save_workspace_artifacts(solution: ActorSolution) -> Optional[Path]:
     return predictions_dest
 
 
-def cleanup_workspace():
-    """Clean up workspace directory."""
-    if ACTOR_WORKSPACE.exists():
-        logger.debug(f"Cleaning up workspace | path={ACTOR_WORKSPACE}")
+def cleanup_workspace(workspace: Path) -> None:
+    """Clean up a per-run workspace directory."""
+    if workspace.exists():
+        logger.debug(f"Cleaning up workspace | path={workspace}")
         cleanup_start = time.time()
         try:
-            shutil.rmtree(ACTOR_WORKSPACE)
+            shutil.rmtree(workspace)
             cleanup_duration = time.time() - cleanup_start
             logger.info(
-                f"Cleaned up workspace | path={ACTOR_WORKSPACE} | duration_sec={cleanup_duration:.3f}"
+                f"Cleaned up workspace | path={workspace} | duration_sec={cleanup_duration:.3f}"
             )
         except (OSError, PermissionError) as e:
             logger.error(
-                f"Failed to cleanup workspace | path={ACTOR_WORKSPACE} | "
+                f"Failed to cleanup workspace | path={workspace} | "
                 f"error_type={type(e).__name__} | error={e}"
             )
             raise
     else:
-        logger.debug(f"Workspace does not exist, skipping cleanup | path={ACTOR_WORKSPACE}")
-
-
-def get_workspace_path() -> Path:
-    """Get the actor workspace root directory path."""
-    return ACTOR_WORKSPACE
+        logger.debug(f"Workspace does not exist, skipping cleanup | path={workspace}")

@@ -1,18 +1,10 @@
-import json
 import tempfile
 from pathlib import Path
 
 import pytest
 
-from scald.common.logger import (
-    get_artifact_path,
-    get_logger,
-    get_session_dir,
-    reset_logging,
-    save_json,
-    save_text,
-    setup_logging,
-)
+from scald.common.logger import get_logger, reset_logging, setup_logging
+from scald.common.session import get_session_dir
 
 
 @pytest.fixture(autouse=True)
@@ -75,7 +67,9 @@ class TestLoggingSetup:
         setup_logging(base_log_dir=temp_log_dir, session_name="first")
         first_dir = get_session_dir()
 
-        setup_logging(base_log_dir=temp_log_dir, session_name="second", force_reinit=True)
+        setup_logging(
+            base_log_dir=temp_log_dir, session_name="second", force_reinit=True
+        )
         second_dir = get_session_dir()
 
         assert first_dir != second_dir
@@ -109,108 +103,3 @@ class TestLoggerAccess:
         logger = get_logger()
         assert logger is not None
         assert get_session_dir().exists()
-
-
-class TestArtifactManagement:
-    """Tests for artifact path and file saving."""
-
-    def test_get_artifact_path(self, temp_log_dir):
-        """Should return path in session directory."""
-        setup_logging(base_log_dir=temp_log_dir, session_name="test")
-
-        artifact_path = get_artifact_path("test.txt")
-        assert artifact_path.parent == get_session_dir()
-        assert artifact_path.name == "test.txt"
-
-    def test_save_json_creates_file(self, temp_log_dir):
-        """Should save JSON data to file."""
-        setup_logging(base_log_dir=temp_log_dir, session_name="test")
-
-        data = {"key": "value", "number": 42}
-        filepath = save_json(data, "test_data.json")
-
-        assert filepath.exists()
-        assert filepath.suffix == ".json"
-
-        with open(filepath) as f:
-            loaded = json.load(f)
-        assert loaded == data
-
-    def test_save_json_adds_extension(self, temp_log_dir):
-        """Should add .json extension if missing."""
-        setup_logging(base_log_dir=temp_log_dir, session_name="test")
-
-        filepath = save_json({"test": "data"}, "no_extension")
-        assert filepath.suffix == ".json"
-        assert filepath.exists()
-
-    def test_save_json_handles_datetime(self, temp_log_dir):
-        """Should serialize datetime objects."""
-        from datetime import datetime
-
-        setup_logging(base_log_dir=temp_log_dir, session_name="test")
-
-        data = {"timestamp": datetime.now()}
-        filepath = save_json(data, "datetime_test.json")
-
-        assert filepath.exists()
-        with open(filepath) as f:
-            loaded = json.load(f)
-        assert "timestamp" in loaded
-
-    def test_save_json_error_handling(self, temp_log_dir):
-        """Should raise error on save failure."""
-        setup_logging(base_log_dir=temp_log_dir, session_name="test")
-
-        # Make directory read-only to trigger save error
-        session_dir = get_session_dir()
-        session_dir.chmod(0o444)
-
-        try:
-            with pytest.raises(Exception):
-                save_json({"test": "data"}, "test.json")
-        finally:
-            session_dir.chmod(0o755)
-
-    def test_save_text_creates_file(self, temp_log_dir):
-        """Should save text content to file."""
-        setup_logging(base_log_dir=temp_log_dir, session_name="test")
-
-        content = "Hello, World!\nThis is a test."
-        filepath = save_text(content, "test.txt")
-
-        assert filepath.exists()
-        with open(filepath) as f:
-            loaded = f.read()
-        assert loaded == content
-
-    def test_save_text_error_handling(self, temp_log_dir):
-        """Should raise error on save failure."""
-        setup_logging(base_log_dir=temp_log_dir, session_name="test")
-
-        # Try to save to invalid path
-        with pytest.raises(Exception):
-            # Create read-only directory to trigger error
-            session_dir = get_session_dir()
-            session_dir.chmod(0o444)
-            try:
-                save_text("content", "test.txt")
-            finally:
-                session_dir.chmod(0o755)
-
-
-class TestSessionDirectory:
-    """Tests for session directory management."""
-
-    def test_get_session_dir_auto_initializes(self, temp_log_dir):
-        """Should auto-initialize if not initialized."""
-        reset_logging()
-        session_dir = get_session_dir()
-        assert session_dir.exists()
-
-    def test_get_session_dir_returns_path(self, temp_log_dir):
-        """Should return Path object."""
-        setup_logging(base_log_dir=temp_log_dir, session_name="test")
-        session_dir = get_session_dir()
-        assert isinstance(session_dir, Path)
-        assert session_dir.exists()

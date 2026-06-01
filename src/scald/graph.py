@@ -1,13 +1,3 @@
-"""Actor-Critic control flow as a pydantic-graph finite state machine.
-
-The loop is a textbook FSM: the actor proposes a solution, the critic scores it,
-and execution either terminates (accepted, or budget exhausted) or loops back with
-feedback. Modelling it as a graph keeps the transition logic explicit and the run
-state inspectable/persistable, instead of a hand-rolled ``for`` loop.
-
-    ActorNode --> CriticNode --> (ActorNode | End[ActorSolution])
-"""
-
 from __future__ import annotations
 
 import time
@@ -35,6 +25,7 @@ class GraphDeps:
     actor: Actor
     critic: Critic
     memory: MemoryManager
+    workspace: Path
     train_path: Path
     test_path: Path
     target: str
