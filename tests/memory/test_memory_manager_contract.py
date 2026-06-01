@@ -41,7 +41,8 @@ def sample_actor_solution():
 def sample_critic_evaluation():
     """Sample CriticEvaluation for testing."""
     return CriticEvaluation(
-        score=1, feedback="Model is well-tuned with good generalization. Excellent work!"
+        score=1,
+        feedback="Model is well-tuned with good generalization. Excellent work!",
     )
 
 
@@ -262,7 +263,7 @@ class TestRetrieveRelevantContextContract:
         # Contract: CriticMemoryContext structure
         assert isinstance(context, CriticMemoryContext)
         assert isinstance(context.iteration, int)
-        assert isinstance(context.score, int)
+        assert isinstance(context.score, float)
         assert isinstance(context.actions_observed, str)
         assert isinstance(context.feedback_given, str)
         assert len(context.actions_observed) > 0
@@ -483,9 +484,13 @@ class TestUtilityMethodsContract:
             entry_id = result["ids"][0]
             metadata = result["metadatas"][0]
             # Remove critic_score to simulate legacy data
-            metadata_without_score = {k: v for k, v in metadata.items() if k != "critic_score"}
+            metadata_without_score = {
+                k: v for k, v in metadata.items() if k != "critic_score"
+            }
 
-            memory_manager.collection.update(ids=[entry_id], metadatas=[metadata_without_score])
+            memory_manager.collection.update(
+                ids=[entry_id], metadatas=[metadata_without_score]
+            )
 
         # Retrieve should still work, falling back to score from critic_evaluation JSON
         actor_contexts, critic_contexts = memory_manager.retrieve(
@@ -498,5 +503,5 @@ class TestUtilityMethodsContract:
         assert len(actor_contexts) == 1
         assert len(critic_contexts) == 1
         assert isinstance(actor_contexts[0].accepted, bool)
-        assert isinstance(critic_contexts[0].score, int)
+        assert isinstance(critic_contexts[0].score, float)
         assert critic_contexts[0].score == sample_critic_evaluation.score

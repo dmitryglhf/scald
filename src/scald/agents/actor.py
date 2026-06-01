@@ -1,6 +1,7 @@
 from pathlib import Path
-from typing import Literal, cast
+from typing import Any, Literal, cast
 
+from pydantic_ai import Agent, RunContext
 from toon import encode
 
 from scald.agents.base import BaseAgent
@@ -64,6 +65,30 @@ Use predictions_path from best performing model: ActorSolution(predictions_path=
             "machine_learning",
         ]
 
+    def _register_dynamic_prompts(self, agent: Agent[ActorContext, Any]) -> None:
+        @agent.system_prompt
+        def task_prompt(ctx: RunContext[ActorContext]) -> str:
+            task = ctx.deps.task
+            sections = [
+                f"Solve this {task.task_type} task (iteration {task.iteration}):",
+                f"- Train Dataset CSV: {task.train_path}",
+                f"- Test Dataset CSV: {task.test_path}",
+                f"- Target column: {task.target}",
+            ]
+
+            if ctx.deps.feedback:
+                sections.append(
+                    f"\nPrevious critic feedback to address:\n{ctx.deps.feedback}"
+                )
+
+            if ctx.deps.past_experiences:
+                sections.append(
+                    "\nRelevant past experiences:\n"
+                    + encode([e.model_dump() for e in ctx.deps.past_experiences])
+                )
+
+            return "\n".join(sections)
+
     async def solve_task(
         self,
         train_path: str | Path,
@@ -86,21 +111,8 @@ Use predictions_path from best performing model: ActorSolution(predictions_path=
             past_experiences=past_experiences if past_experiences is not None else [],
         )
 
-        sections = [
-            f"Solve {task_type} task:",
-            f"- Train Dataset CSV: {train_path}",
-            f"- Test Dataset CSV: {test_path}",
-            f"- Target column: {target}",
-        ]
-
-        if feedback:
-            sections.append(f"- Previous feedback: {feedback}")
-
-        if past_experiences:
-            sections.append(
-                f"\nPast experiences: {encode([e.model_dump() for e in past_experiences])}"
-            )
-
-        prompt = "\n".join(sections)
-        result = await self._run_agent(prompt, deps=ctx)
+        result = await self._run_agent(
+            "Produce the best solution for the task described in your instructions.",
+            deps=ctx,
+        )
         return cast(ActorSolution, result)

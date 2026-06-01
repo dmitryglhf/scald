@@ -11,7 +11,12 @@ from chromadb.api.models.Collection import Collection
 from chromadb.utils.embedding_functions import JinaEmbeddingFunction
 
 from scald.common.logger import get_logger
-from scald.models import ActorMemoryContext, ActorSolution, CriticEvaluation, CriticMemoryContext
+from scald.models import (
+    ActorMemoryContext,
+    ActorSolution,
+    CriticEvaluation,
+    CriticMemoryContext,
+)
 
 TaskType = Literal["classification", "regression"]
 
@@ -52,7 +57,9 @@ class MemoryManager:
                 where={"task_type": task_type},
             )
             query_duration = time.time() - query_start
-            logger.debug(f"ChromaDB query completed | duration_sec={query_duration:.3f}")
+            logger.debug(
+                f"ChromaDB query completed | duration_sec={query_duration:.3f}"
+            )
         except Exception as e:
             logger.error(
                 f"ChromaDB query failed | task_type={task_type} | top_k={top_k} | "
@@ -78,11 +85,14 @@ class MemoryManager:
                 critic_eval_data = json.loads(metadata["critic_evaluation"])  # type: ignore[arg-type]
                 critic_evaluation = CriticEvaluation(**critic_eval_data)
 
-                critic_score = metadata.get("critic_score", critic_evaluation.score)
+                critic_score = float(
+                    metadata.get("critic_score", critic_evaluation.score)
+                )  # type: ignore[arg-type]
+                accepted = bool(metadata.get("accepted", False))
 
                 actor_ctx = ActorMemoryContext(
                     iteration=metadata["iteration"],  # type: ignore[arg-type]
-                    accepted=critic_score == 1,
+                    accepted=accepted,
                     actions_summary=document,
                     feedback_received=critic_evaluation.feedback,
                 )
@@ -90,7 +100,7 @@ class MemoryManager:
 
                 critic_ctx = CriticMemoryContext(
                     iteration=metadata["iteration"],  # type: ignore[arg-type]
-                    score=critic_score,  # type: ignore[arg-type]
+                    score=critic_score,
                     actions_observed=document,
                     feedback_given=critic_evaluation.feedback,
                 )
@@ -117,10 +127,12 @@ class MemoryManager:
         critic_evaluation: CriticEvaluation,
         task_type: TaskType,
         iteration: int,
+        accepted: bool = False,
     ) -> str:
         logger.debug(
             f"Saving memory entry | task_type={task_type} | iteration={iteration} | "
-            f"score={critic_evaluation.score:.3f} | report_length={len(actor_solution.report)}"
+            f"score={critic_evaluation.score:.3f} | accepted={accepted} | "
+            f"report_length={len(actor_solution.report)}"
         )
 
         entry_id = str(uuid.uuid4())
@@ -129,6 +141,7 @@ class MemoryManager:
             "task_type": task_type,
             "iteration": iteration,
             "critic_score": critic_evaluation.score,
+            "accepted": accepted,
             "critic_evaluation": critic_evaluation.model_dump_json(),
             "timestamp": datetime.now().isoformat(),
         }

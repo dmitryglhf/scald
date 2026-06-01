@@ -38,8 +38,19 @@ class ActorSolution(BaseModel):
 
 
 class CriticEvaluation(BaseModel):
-    score: int = Field(ge=0, le=1, description="0=reject, 1=accept")
-    feedback: str = Field(description="Feedback and suggestions")
+    score: float = Field(
+        ge=0.0,
+        le=1.0,
+        description="Overall solution quality in [0.0, 1.0], averaged across rubrics",
+    )
+    rubric_scores: dict[str, float] = Field(
+        default_factory=dict,
+        description="Per-rubric scores in [0.0, 1.0] keyed by rubric name "
+        "(data_analysis, preprocessing, model_training, results)",
+    )
+    feedback: str = Field(
+        description="Targeted feedback and suggestions for the next iteration"
+    )
 
 
 class MemoryEntry(BaseModel):
@@ -64,6 +75,6 @@ class ActorMemoryContext(BaseModel):
 
 class CriticMemoryContext(BaseModel):
     iteration: int
-    score: int
+    score: float
     actions_observed: str
     feedback_given: str

@@ -1,6 +1,6 @@
 import time
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
 import numpy as np
 import polars as pl
@@ -14,6 +14,7 @@ from scald.common.workspace import (
     prepare_datasets_for_workspace,
     save_workspace_artifacts,
 )
+from scald.graph import ActorNode, GraphDeps, RunState, solution_graph
 from scald.memory import MemoryManager
 
 logger = get_logger()
@@ -49,103 +50,29 @@ class Scald:
 
         workspace_train, workspace_test = prepare_datasets_for_workspace(train, test)
 
-        actor_memory: list[Any] = []
-        critic_memory: list[Any] = []
-        feedback: str | None = None
-        actor_solution = None
+        deps = GraphDeps(
+            actor=self.actor,
+            critic=self.critic,
+            memory=self.mm,
+            train_path=workspace_train,
+            test_path=workspace_test,
+            target=target,
+            task_type=task_type,
+            max_iterations=self.max_iterations,
+            acceptance_threshold=self.acceptance_threshold,
+        )
+        state = RunState()
 
         try:
-            for iteration in range(1, self.max_iterations + 1):
-                iter_start_time = time.time()
-                logger.info(
-                    f"Iteration {iteration}/{self.max_iterations} started | task_type={task_type}"
-                )
+            result = await solution_graph.run(ActorNode(), state=state, deps=deps)
+            actor_solution = result.output
 
-                logger.debug(
-                    f"Actor solving | iteration={iteration} | has_feedback={feedback is not None} | "
-                    f"past_experiences={len(actor_memory)}"
-                )
-                actor_start = time.time()
-                actor_solution = await self.actor.solve_task(
-                    train_path=workspace_train,
-                    test_path=workspace_test,
-                    target=target,
-                    task_type=task_type,
-                    iteration=iteration,
-                    feedback=feedback,
-                    past_experiences=actor_memory,
-                )
-                actor_duration = time.time() - actor_start
-                logger.info(
-                    f"Actor completed | iteration={iteration} | duration_sec={actor_duration:.2f} | "
-                    f"has_predictions={actor_solution.predictions_path is not None}"
-                )
-
-                logger.debug(f"Critic evaluating | iteration={iteration}")
-                critic_start = time.time()
-                critic_evaluation = await self.critic.evaluate(
-                    solution=actor_solution,
-                    train_path=workspace_train,
-                    test_path=workspace_test,
-                    target=target,
-                    task_type=task_type,
-                    past_evaluations=critic_memory,
-                )
-                critic_duration = time.time() - critic_start
-                logger.info(
-                    f"Critic completed | iteration={iteration} | duration_sec={critic_duration:.2f} | "
-                    f"score={critic_evaluation.score:.3f} | threshold={self.acceptance_threshold}"
-                )
-
-                entry_id = self.mm.save(
-                    actor_solution=actor_solution,
-                    critic_evaluation=critic_evaluation,
-                    task_type=task_type,
-                    iteration=iteration,
-                )
-                logger.info(f"Memory saved | iteration={iteration} | entry_id={entry_id}")
-
-                actor_memory, critic_memory = self.mm.retrieve(
-                    actor_report=actor_solution.report,
-                    task_type=task_type,
-                    top_k=5,
-                )
-                logger.info(
-                    f"Memory retrieved | iteration={iteration} | actor_entries={len(actor_memory)} | "
-                    f"critic_entries={len(critic_memory)}"
-                )
-
-                iter_duration = time.time() - iter_start_time
-                accepted = critic_evaluation.score >= self.acceptance_threshold
-                logger.info(
-                    f"=== Iteration {iteration} completed | duration_sec={iter_duration:.2f} | "
-                    f"score={critic_evaluation.score:.3f} | accepted={accepted} ==="
-                )
-
-                if accepted:
-                    total_duration = time.time() - run_start_time
-                    logger.info(
-                        f"Solution ACCEPTED | iteration={iteration} | score={critic_evaluation.score:.3f} | "
-                        f"threshold={self.acceptance_threshold} | total_duration_sec={total_duration:.2f}"
-                    )
-                    saved_pred_path = save_workspace_artifacts(actor_solution)
-                    return self._extract_predictions(saved_pred_path)
-
-                feedback = critic_evaluation.feedback
-                logger.debug(
-                    f"Feedback prepared for next iteration | iteration={iteration} | "
-                    f"feedback_length={len(feedback)}"
-                )
-
-            if actor_solution is None:
-                raise ValueError("No iterations executed - this should never happen")
-
-            total_duration = time.time() - run_start_time
-            logger.warning(
-                f"Max iterations reached | iterations={self.max_iterations} | "
-                f"final_score={critic_evaluation.score:.3f} | threshold={self.acceptance_threshold} | "
-                f"total_duration_sec={total_duration:.2f} | status=returning_last_solution"
+            logger.info(
+                f"Scald run finished | iterations={state.iteration} | "
+                f"score_history={[round(s, 3) for s in state.score_history]} | "
+                f"total_duration_sec={time.time() - run_start_time:.2f}"
             )
+
             saved_pred_path = save_workspace_artifacts(actor_solution)
             return self._extract_predictions(saved_pred_path)
 
@@ -175,7 +102,9 @@ class Scald:
                     )
 
                 predictions_array = pred_df["prediction"].to_numpy()
-                logger.info(f"Extracted {len(predictions_array)} predictions from CSV file")
+                logger.info(
+                    f"Extracted {len(predictions_array)} predictions from CSV file"
+                )
                 return predictions_array
 
             raise ValueError(

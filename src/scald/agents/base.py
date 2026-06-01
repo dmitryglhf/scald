@@ -69,7 +69,7 @@ class BaseAgent(UsageTrackingMixin, ABC, Generic[DepsT]):
 
         toolsets = get_mcp_toolsets(mcp_tools) if mcp_tools else []
 
-        return Agent(
+        agent: Agent[DepsT, Any] = Agent(
             name=self.__class__.__name__,
             model=self._model,
             output_type=output_type,
@@ -78,6 +78,18 @@ class BaseAgent(UsageTrackingMixin, ABC, Generic[DepsT]):
             instrument=True,
             toolsets=toolsets,
         )
+        self._register_dynamic_prompts(agent)
+        return agent
+
+    def _register_dynamic_prompts(self, agent: Agent[DepsT, Any]) -> None:
+        """Override to attach deps-aware dynamic system prompts.
+
+        Subclasses register functions taking ``RunContext[DepsT]`` via
+        ``agent.system_prompt`` so per-run context (task, feedback, past
+        experiences) is injected through dependency injection rather than
+        hand-built user-prompt strings.
+        """
+        return None
 
     @abstractmethod
     def _get_system_prompt(self) -> str:
@@ -85,7 +97,9 @@ class BaseAgent(UsageTrackingMixin, ABC, Generic[DepsT]):
         pass
 
     @abstractmethod
-    def _get_output_type(self) -> Type[BaseModel] | Type[dict[str, Any]] | Type[list[Any]]:
+    def _get_output_type(
+        self,
+    ) -> Type[BaseModel] | Type[dict[str, Any]] | Type[list[Any]]:
         """Returns output type for structured responses."""
         pass
 

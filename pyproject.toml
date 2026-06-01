@@ -1,55 +1,58 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = [ "hatchling" ]
+
 [project]
 name = "scald"
 version = "0.1.3"
 description = "Scalable Collaborative Agents for Data Science"
 readme = "README.md"
+license = { text = "MIT" }
+authors = [ { name = "Dmitry Gilemkhanov", email = "me@dmitryglhf.ru" } ]
 requires-python = ">=3.11"
-authors = [
-    {name = "Dmitry Gilemkhanov", email = "me@dmitryglhf.ru"}
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
 ]
-license = {text = "MIT"}
 dependencies = [
-    "python-dotenv>=1.2.1",
-    "python-toon>=0.1.3",
-    "genai-prices>=0.0.35",
-    "chromadb>=1.3.2",
-    "optuna>=4.5.0",
-    "xgboost>=3.1.1",
-    "lightgbm>=4.6.0",
-    "catboost>=1.2.8",
-    "polars>=1.35.1",
-    "fastmcp>=2.13.0.2",
-    "scikit-learn>=1.7.2",
-    "pydantic-ai>=1.10.0",
-    "pydantic>=2.12.3",
-    "pydantic-evals>=1.10.0",
-    "logly>=0.1.6",
+  "catboost>=1.2.8",
+  "chromadb>=1.3.2",
+  "fastmcp>=2.13.0.2",
+  "genai-prices>=0.0.35",
+  "lightgbm>=4.6",
+  "logly>=0.1.6",
+  "optuna>=4.5",
+  "polars>=1.35.1",
+  "pydantic>=2.12.3",
+  "pydantic-ai>=1.10",
+  "python-dotenv>=1.2.1",
+  "python-toon>=0.1.3",
+  "scikit-learn>=1.7.2",
+  "xgboost>=3.1.1",
 ]
-
-[project.scripts]
-scald = "scald.cli:main"
+scripts.scald = "scald.cli:main"
 
 [dependency-groups]
 dev = [
-    "prek>=0.2.18",
-    "ty>=0.0.1a27",
-    "ruff>=0.14.2",
-    "pytest>=8.4.2",
-    "pytest-asyncio>=1.2.0",
-    "pytest-cov>=7.0.0",
+  "prek>=0.2.18",
+  "ruff>=0.14.2",
+  "ty>=0.0.1a27",
+]
+test = [
+  "pytest>=8.4.2",
+  "pytest-asyncio>=1.2",
 ]
 docs = [
-    "mkdocs",
-    "mkdocs-material",
-    "mkdocstrings[python]",
+  "mkdocs",
+  "mkdocs-material",
+  "mkdocstrings[python]",
 ]
 benchmarks = [
-    "openml>=0.14.0",
+  "openml>=0.14",
 ]
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/scald"]
+[tool.hatch]
+build.targets.wheel.packages = [ "src/scald" ]
