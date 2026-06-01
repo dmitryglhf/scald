@@ -12,6 +12,9 @@
 
 </div>
 
+> [!WARNING]
+> Edda is in early development (v0.1). The API will change between versions.
+
 ## Overview
 
 Scald automates machine learning workflows through collaborative AI agents using the Actor-Critic pattern. The Actor agent explores data, engineers features, and trains models using five specialized MCP servers. The Critic agent evaluates solutions and provides targeted feedback for iterative refinement. This approach combines LLM-powered reasoning with gradient boosting algorithms (CatBoost, LightGBM, XGBoost) for both classification and regression tasks.
