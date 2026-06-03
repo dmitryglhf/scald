@@ -13,7 +13,7 @@
 </div>
 
 > [!WARNING]
-> Edda is in early development (v0.1). The API will change between versions.
+> Early development (v0.1). The API will change between versions.
 
 ## Overview
 
